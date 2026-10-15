@@ -75,10 +75,10 @@ check('aceptar dos veces no duplica al miembro', repetida === h1);
 console.log('Clases y sesiones');
 const monitorId = one(await as(U.adminA,
   `select id from public.miembros where hipica_id = $1 and rol = 'monitor'`, [h1]));
-const claseId = one(await as(U.adminA, `
+await as(U.adminA, `
   insert into public.clases (hipica_id, titulo, monitor_id, dia_semana, hora_inicio, plazas)
   values ($1, 'Iniciación', $2, extract(isodow from current_date + 1), '18:00', 1) returning id`,
-  [h1, monitorId]));
+  [h1, monitorId]);
 const creadas = one(await as(U.adminA, `select public.generar_sesiones($1, current_date + 14)`, [h1]));
 check('genera 2 sesiones en 14 días', creadas === 2, `(creadas: ${creadas})`);
 const otraVez = one(await as(U.adminA, `select public.generar_sesiones($1, current_date + 14)`, [h1]));

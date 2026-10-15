@@ -51,11 +51,14 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
     }>();
   if (!yo?.hipicas) notFound();
 
+  // Desde 12 h atrás, para que el monitor vea también las clases de hoy ya empezadas.
   const ahora = new Date();
+  const desde = new Date(ahora.getTime() - 12 * 36e5);
   const hasta = new Date(ahora.getTime() + DIAS_VISTA * 864e5);
+  const esStaff = yo.rol === "admin" || yo.rol === "monitor";
   const { data, error } = await supabase.rpc("horario", {
     p_hipica: id,
-    p_desde: ahora.toISOString(),
+    p_desde: desde.toISOString(),
     p_hasta: hasta.toISOString(),
   });
   if (error) throw new Error(error.message);
@@ -66,7 +69,9 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
   const fHora = new Intl.DateTimeFormat("es-ES", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
 
   const dias = new Map<string, Sesion[]>();
-  for (const s of sesiones) {
+  // Los alumnos solo ven clases futuras; el equipo también las de hoy ya empezadas.
+  const visibles = sesiones.filter((s) => esStaff || new Date(s.inicio) > ahora);
+  for (const s of visibles) {
     const clave = fDia.format(new Date(s.inicio));
     dias.set(clave, [...(dias.get(clave) ?? []), s]);
   }
@@ -98,6 +103,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
           <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200">
             {lista.map((s) => {
               const libres = Math.max(s.plazas - s.ocupadas, 0);
+              const empezada = new Date(s.inicio) <= ahora;
               return (
                 <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4">
                   <div className="w-14 font-mono text-sm">{fHora.format(new Date(s.inicio))}</div>
@@ -109,6 +115,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
                     <p className="text-sm text-neutral-600">
                       {s.cancelada
                         ? "Cancelada"
+                        : empezada
+                          ? `Empezada · ${s.ocupadas} ${s.ocupadas === 1 ? "alumno" : "alumnos"}`
                         : s.mi_reserva
                           ? "Tienes plaza"
                           : libres === 0
@@ -117,7 +125,15 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
                       {s.monitor && ` · ${s.monitor}`}
                     </p>
                   </div>
-                  {!s.cancelada && s.mi_reserva && (
+                  {esStaff && (
+                    <Link
+                      href={`/hipica/${id}/sesion/${s.id}`}
+                      className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50"
+                    >
+                      Lista ({s.ocupadas})
+                    </Link>
+                  )}
+                  {!empezada && !s.cancelada && s.mi_reserva && (
                     <form action={anular}>
                       <input type="hidden" name="hipica_id" value={id} />
                       <input type="hidden" name="reserva_id" value={s.mi_reserva} />
@@ -126,7 +142,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
                       </button>
                     </form>
                   )}
-                  {!s.cancelada && !s.mi_reserva && libres > 0 && (
+                  {!empezada && !s.cancelada && !s.mi_reserva && libres > 0 && (
                     <form action={reservar}>
                       <input type="hidden" name="hipica_id" value={id} />
                       <input type="hidden" name="sesion_id" value={s.id} />
