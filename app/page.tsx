@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { cerrarSesion } from "./actions";
@@ -51,9 +52,21 @@ async function ListaHipicas() {
   return (
     <ul className="mt-6 space-y-3">
       {data.map((m) => (
-        <li key={m.hipicas?.id} className="rounded-lg border border-neutral-200 p-4">
-          <p className="font-medium">{m.hipicas?.nombre}</p>
-          <p className="text-sm text-neutral-600">{ROLES[m.rol]}</p>
+        <li key={m.hipicas?.id} className="rounded-lg border border-neutral-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-medium">{m.hipicas?.nombre}</p>
+              <p className="text-sm text-neutral-600">{ROLES[m.rol]}</p>
+            </div>
+            {m.rol === "admin" && m.hipicas && (
+              <Link
+                href={`/hipica/${m.hipicas.id}/clases`}
+                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50"
+              >
+                Clases
+              </Link>
+            )}
+          </div>
         </li>
       ))}
     </ul>
