@@ -2,8 +2,12 @@
 // Crea uno nuevo en cada petición; nunca lo reutilices entre peticiones.
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 export async function createClient() {
+  // Todo lo que pasa por Supabase depende del usuario: se calcula en cada
+  // petición real, nunca durante el prerenderizado (evita el aviso de Date.now()).
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient(
