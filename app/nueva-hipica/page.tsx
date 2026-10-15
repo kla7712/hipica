@@ -15,6 +15,9 @@ export default function NuevaHipicaPage({ searchParams }: PageProps<"/nueva-hipi
           <p className="text-sm text-neutral-600">
             Serás su administrador. Después podrás invitar a monitores y alumnos.
           </p>
+          <p className="text-sm text-neutral-600">
+            ¿Eres alumno? No crees nada: abre el enlace de invitación que te ha enviado tu hípica.
+          </p>
         </div>
 
         <form action={crearHipica} className="space-y-4">

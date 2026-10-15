@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { rutaSegura } from "@/lib/rutas";
 import { enviarEnlace } from "./actions";
 
 const ERRORES: Record<string, string> = {
@@ -28,7 +29,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 }
 
 async function Formulario({ searchParams }: Pick<PageProps<"/login">, "searchParams">) {
-  const { enviado, error } = await searchParams;
+  const { enviado, error, next } = await searchParams;
   const mensajeError = typeof error === "string" ? ERRORES[error] : undefined;
 
   if (typeof enviado === "string") {
@@ -42,6 +43,7 @@ async function Formulario({ searchParams }: Pick<PageProps<"/login">, "searchPar
 
   return (
     <form action={enviarEnlace} className="space-y-4">
+      <input type="hidden" name="next" value={rutaSegura(next)} />
       <div className="space-y-2">
         <label htmlFor="email" className="text-sm font-medium">
           Email

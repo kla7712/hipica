@@ -5,6 +5,7 @@ import { createClient, getUserId } from "@/lib/supabase/server";
 import { cerrarSesion } from "./actions";
 
 const ROLES = { admin: "Administrador", monitor: "Monitor", alumno: "Alumno" } as const;
+const enlace = "rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50";
 
 type Membresia = {
   rol: keyof typeof ROLES;
@@ -58,13 +59,22 @@ async function ListaHipicas() {
               <p className="font-medium">{m.hipicas?.nombre}</p>
               <p className="text-sm text-neutral-600">{ROLES[m.rol]}</p>
             </div>
-            {m.rol === "admin" && m.hipicas && (
-              <Link
-                href={`/hipica/${m.hipicas.id}/clases`}
-                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50"
-              >
-                Clases
-              </Link>
+            {m.hipicas && (
+              <nav className="flex flex-wrap gap-2" aria-label={`Opciones de ${m.hipicas.nombre}`}>
+                <Link href={`/hipica/${m.hipicas.id}`} className={enlace}>
+                  Horario
+                </Link>
+                {m.rol === "admin" && (
+                  <>
+                    <Link href={`/hipica/${m.hipicas.id}/clases`} className={enlace}>
+                      Clases
+                    </Link>
+                    <Link href={`/hipica/${m.hipicas.id}/miembros`} className={enlace}>
+                      Miembros
+                    </Link>
+                  </>
+                )}
+              </nav>
             )}
           </div>
         </li>

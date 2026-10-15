@@ -1,7 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
 
-const migration = readFileSync(process.argv[2], 'utf8');
+const migrations = process.argv.slice(2).map(f => readFileSync(f, 'utf8'));
 const db = new PGlite();
 
 // --- Simular el entorno de Supabase -----------------------------------
@@ -16,7 +16,7 @@ await db.exec(`
   grant execute on function auth.uid() to anon, authenticated;
   grant usage on schema public to anon, authenticated;
 `);
-await db.exec(migration);
+for (const m of migrations) await db.exec(m);
 
 const U = {
   adminA: '00000000-0000-0000-0000-00000000000a',
@@ -173,6 +173,34 @@ await expectError('no se reserva una clase ya empezada', U.alumno1,
 await as(U.adminA, `update public.sesiones set cancelada = true where id = $1`, [s2]);
 await expectError('no se reserva una clase cancelada', U.alumno1,
   `select public.reservar($1)`, [s2], /cancelada/);
+
+
+if (migrations.length > 1) {
+  console.log('Horario e invitaciones (0002)');
+  const desde = new Date().toISOString(), hasta = new Date(Date.now() + 30 * 864e5).toISOString();
+  const hA1 = (await as(U.alumno1, `select * from public.horario($1, $2, $3)`, [h1, desde, hasta])).rows;
+  check('el alumno ve el horario de su hípica', hA1.length >= 2, `(${hA1.length})`);
+  const fila = hA1.find(r => r.id === s1);
+  check('ve plazas ocupadas aunque no vea reservas ajenas', fila && fila.ocupadas === 1, JSON.stringify(fila));
+  check('su reserva no aparece en una sesión ajena', fila && fila.mi_reserva === null);
+  const hA2 = (await as(U.alumno2, `select * from public.horario($1, $2, $3)`, [h1, desde, hasta])).rows;
+  const fila2 = hA2.find(r => r.id === s1);
+  check('alumno 2 ve su propia reserva', fila2 && fila2.mi_reserva === r2);
+  const hB = (await as(U.adminB, `select * from public.horario($1, $2, $3)`, [h1, desde, hasta])).rows;
+  check('admin B no ve el horario de la hípica A', hB.length === 0);
+  const largo = (await as(U.alumno1, `select * from public.horario($1, $2, $3)`,
+    [h1, desde, new Date(Date.now() + 90 * 864e5).toISOString()])).rows;
+  check('rango de más de 62 días no devuelve nada', largo.length === 0);
+  await expectError('anónimo no puede consultar el horario', null,
+    `select * from public.horario($1, $2, $3)`, [h1, desde, hasta], /permission denied/i);
+
+  const inv = (await as(U.intruso, `select * from public.ver_invitacion($1)`, [invAlumno])).rows;
+  check('ver_invitacion muestra hípica y rol', inv.length === 1 && inv[0].hipica_nombre === 'Hípica Uno' && inv[0].rol === 'alumno');
+  const gastada = (await as(U.intruso, `select * from public.ver_invitacion($1)`, [invMonitor])).rows;
+  check('ver_invitacion no muestra invitaciones gastadas', gastada.length === 0);
+  const falsa = (await as(U.intruso, `select * from public.ver_invitacion('nope')`)).rows;
+  check('ver_invitacion no muestra tokens falsos', falsa.length === 0);
+}
 
 console.log(`\n${ok} correctas, ${fail} fallidas`);
 process.exit(fail ? 1 : 0);
