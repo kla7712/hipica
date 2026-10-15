@@ -1,30 +1,28 @@
 import { Suspense } from "react";
 import { rutaSegura } from "@/lib/rutas";
+import { Aviso, Pantalla, boton, campo, etiqueta } from "@/components/app/ui";
 import { enviarEnlace } from "./actions";
 
 const ERRORES: Record<string, string> = {
   email: "Escribe un email válido.",
-  envio: "No hemos podido enviar el enlace. Espera un minuto y vuelve a probar.",
+  envio: "No se ha podido enviar el enlace. Espera un minuto y vuelve a probar.",
   enlace: "El enlace no es válido o ha caducado. Pide uno nuevo.",
 };
 
-// La parte fija de la página se sirve al instante; lo que depende de la URL
-// (?enviado=… o ?error=…) va dentro de <Suspense>.
+// La parte fija se sirve al instante; lo que depende de la URL va dentro de <Suspense>.
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
-    <main className="flex flex-1 items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm space-y-6">
+    <Pantalla ancho="estrecho">
+      <div className="space-y-8 pt-8 sm:pt-16">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Entrar</h1>
-          <p className="text-sm text-neutral-600">
-            Te enviamos un enlace a tu email. Sin contraseñas.
-          </p>
+          <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Entra en tu hípica</h1>
+          <p className="text-tinta-suave">Te enviamos un enlace al email para entrar. Sin contraseñas.</p>
         </div>
         <Suspense>
           <Formulario searchParams={searchParams} />
         </Suspense>
       </div>
-    </main>
+    </Pantalla>
   );
 }
 
@@ -34,9 +32,12 @@ async function Formulario({ searchParams }: Pick<PageProps<"/login">, "searchPar
 
   if (typeof enviado === "string") {
     return (
-      <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
-        Revisa <strong>{enviado}</strong> y pulsa el enlace para entrar. Puede tardar un minuto;
-        mira también en spam.
+      <div className="space-y-3 rounded-xl border border-linea bg-white p-5">
+        <p className="text-lg font-semibold">Revisa tu correo</p>
+        <p className="text-tinta-suave">
+          Hemos enviado un enlace a <strong className="text-tinta">{enviado}</strong>. Ábrelo en este mismo
+          navegador para entrar. Si no llega en un minuto, mira en spam.
+        </p>
       </div>
     );
   }
@@ -45,7 +46,7 @@ async function Formulario({ searchParams }: Pick<PageProps<"/login">, "searchPar
     <form action={enviarEnlace} className="space-y-4">
       <input type="hidden" name="next" value={rutaSegura(next)} />
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">
+        <label htmlFor="email" className={etiqueta}>
           Email
         </label>
         <input
@@ -54,15 +55,13 @@ async function Formulario({ searchParams }: Pick<PageProps<"/login">, "searchPar
           type="email"
           required
           autoComplete="email"
+          inputMode="email"
           placeholder="tu@email.com"
-          className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-base outline-none focus:border-neutral-900"
+          className={campo}
         />
       </div>
-      {mensajeError && <p className="text-sm text-red-700">{mensajeError}</p>}
-      <button
-        type="submit"
-        className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white hover:bg-neutral-800"
-      >
+      {mensajeError && <Aviso tipo="error">{mensajeError}</Aviso>}
+      <button type="submit" className={`${boton} w-full`}>
         Enviarme el enlace
       </button>
     </form>

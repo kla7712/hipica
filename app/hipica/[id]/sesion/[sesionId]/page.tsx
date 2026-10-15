@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
+import { Pantalla, Volver } from "@/components/app/ui";
 import { cambiarCancelacion, marcarAsistencia, quitarAlumno } from "./actions";
 
 type Sesion = {
@@ -20,15 +20,15 @@ type Reserva = {
   alumno: { nombre: string; telefono: string | null } | null;
 };
 
-const botonBase = "rounded-lg px-3 py-2 text-sm font-medium border";
+const botonBase = "inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-semibold";
 
 export default function SesionPage({ params, searchParams }: PageProps<"/hipica/[id]/sesion/[sesionId]">) {
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
-      <Suspense fallback={<p className="text-sm text-neutral-500">Cargando…</p>}>
+    <Pantalla>
+      <Suspense fallback={<p className="text-sm text-tinta-suave">Cargando…</p>}>
         <Contenido params={params} searchParams={searchParams} />
       </Suspense>
-    </main>
+    </Pantalla>
   );
 }
 
@@ -49,15 +49,13 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
   if (!yo) notFound();
 
   const volver = (
-    <Link href={`/hipica/${id}`} className="text-sm text-neutral-600 hover:text-neutral-900">
-      ← Horario
-    </Link>
+    <Volver href={`/hipica/${id}`}>Horario</Volver>
   );
   if (yo.rol === "alumno") {
     return (
       <>
         {volver}
-        <p className="mt-6">Solo el administrador y los monitores pueden ver la lista de asistentes.</p>
+        <p className="mt-8 text-tinta-suave">Solo el administrador y los monitores pueden ver la lista de asistentes.</p>
       </>
     );
   }
@@ -97,14 +95,14 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
       {volver}
 
       <div className="space-y-1">
-        <h1 className={`text-2xl font-semibold tracking-tight ${sesion.cancelada ? "text-neutral-400 line-through" : ""}`}>
+        <h1 className={`text-3xl font-bold tracking-tight [font-stretch:85%] sm:text-4xl ${sesion.cancelada ? "text-tinta-suave/60 line-through" : ""}`}>
           {sesion.titulo}
         </h1>
-        <p className="text-neutral-700 first-letter:uppercase">
+        <p className="text-tinta first-letter:uppercase">
           {fDia.format(new Date(sesion.inicio))} · {fHora.format(new Date(sesion.inicio))}–
           {fHora.format(new Date(sesion.fin))}
         </p>
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-tinta-suave">
           {sesion.cancelada ? "Clase cancelada · " : ""}
           {lista.length} de {sesion.plazas} plazas ocupadas
           {sesion.monitor && ` · ${sesion.monitor.nombre}`}
@@ -116,7 +114,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-semibold">Asistentes</h2>
           {lista.length > 0 && (
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-tinta-suave">
               {vinieron} {vinieron === 1 ? "ha venido" : "han venido"}
               {sinMarcar > 0 && ` · ${sinMarcar} sin marcar`}
             </p>
@@ -124,17 +122,17 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
         </div>
 
         {lista.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-600">
+          <p className="rounded-xl border border-dashed border-linea bg-white/60 px-6 py-10 text-center text-tinta-suave">
             Nadie ha reservado todavía.
           </p>
         ) : (
-          <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200">
+          <ul className="divide-y divide-linea overflow-hidden rounded-xl border border-linea bg-white">
             {lista.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{r.alumno?.nombre ?? "Alumno"}</p>
+                  <p className="font-semibold">{r.alumno?.nombre ?? "Alumno"}</p>
                   {r.alumno?.telefono && (
-                    <a href={`tel:${r.alumno.telefono}`} className="text-sm text-neutral-600 underline">
+                    <a href={`tel:${r.alumno.telefono}`} className="text-sm text-tinta-suave underline">
                       {r.alumno.telefono}
                     </a>
                   )}
@@ -149,8 +147,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
                     aria-pressed={r.asistio === true}
                     className={`${botonBase} ${
                       r.asistio === true
-                        ? "border-emerald-700 bg-emerald-700 text-white"
-                        : "border-neutral-300 hover:bg-neutral-50"
+                        ? "border-cuadra bg-cuadra text-white"
+                        : "border-linea bg-white hover:border-tinta-suave"
                     }`}
                   >
                     Vino
@@ -162,8 +160,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
                     aria-pressed={r.asistio === false}
                     className={`${botonBase} ${
                       r.asistio === false
-                        ? "border-red-700 bg-red-700 text-white"
-                        : "border-neutral-300 hover:bg-neutral-50"
+                        ? "border-alerta bg-alerta text-white"
+                        : "border-linea bg-white hover:border-tinta-suave"
                     }`}
                   >
                     No vino
@@ -173,7 +171,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
                 {esAdmin && !empezada && (
                   <form action={quitarAlumno}>
                     <input type="hidden" name="reserva_id" value={r.id} />
-                    <button type="submit" className="rounded-lg px-3 py-2 text-sm text-neutral-600 underline hover:text-neutral-900">
+                    <button type="submit" className="rounded-lg px-3 py-2 text-sm text-tinta-suave underline hover:text-tinta">
                       Quitar
                     </button>
                   </form>
@@ -186,7 +184,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
 
       {/* Cancelar clase (solo admin y antes de que empiece) */}
       {esAdmin && !empezada && (
-        <section className="space-y-3 rounded-lg border border-neutral-200 bg-neutral-50 p-5">
+        <section className="space-y-3 rounded-xl border border-linea bg-white p-5">
           {sesion.cancelada ? (
             <>
               <p className="text-sm">Esta clase está cancelada. Los alumnos la ven como cancelada en su horario.</p>
@@ -194,7 +192,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
                 <input type="hidden" name="hipica_id" value={id} />
                 <input type="hidden" name="sesion_id" value={sesionId} />
                 <input type="hidden" name="cancelada" value="false" />
-                <button type="submit" className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium hover:bg-neutral-100">
+                <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-linea bg-white px-4 text-sm font-semibold hover:border-tinta-suave">
                   Reactivar clase
                 </button>
               </form>
@@ -203,7 +201,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
             <>
               <div>
                 <h2 className="font-semibold">Cancelar esta clase</h2>
-                <p className="text-sm text-neutral-600">
+                <p className="text-sm text-tinta-suave">
                   Solo este día. El resto de semanas siguen igual. Avisa a los alumnos por WhatsApp: por
                   ahora la app no les manda email.
                 </p>
@@ -217,9 +215,9 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
                   Sí, quiero cancelar la clase de este día
                 </label>
                 {errorQuery === "confirmar" && (
-                  <p className="text-sm text-red-700">Marca la casilla para confirmar.</p>
+                  <p className="text-sm text-alerta">Marca la casilla para confirmar.</p>
                 )}
-                <button type="submit" className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800">
+                <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-alerta px-4 text-sm font-semibold text-white hover:brightness-90">
                   Cancelar clase
                 </button>
               </form>

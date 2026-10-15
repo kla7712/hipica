@@ -2,36 +2,32 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
+import { Pantalla, botonSecundario } from "@/components/app/ui";
 import { cerrarSesion } from "./actions";
 
 const ROLES = { admin: "Administrador", monitor: "Monitor", alumno: "Alumno" } as const;
-const enlace = "rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50";
 
 type Membresia = {
   rol: keyof typeof ROLES;
   hipicas: { id: string; nombre: string } | null;
 };
 
-// La cabecera se sirve al instante; la lista depende del usuario y va en <Suspense>.
 export default function InicioPage() {
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+    <Pantalla>
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Tus hípicas</h1>
+        <h1 className="text-3xl font-bold tracking-tight [font-stretch:85%] sm:text-4xl">Tus hípicas</h1>
         <form action={cerrarSesion}>
-          <button
-            type="submit"
-            className="rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100"
-          >
+          <button type="submit" className="min-h-11 rounded-lg px-3 text-sm font-medium text-tinta-suave hover:text-tinta">
             Cerrar sesión
           </button>
         </form>
       </div>
 
-      <Suspense fallback={<p className="mt-6 text-sm text-neutral-500">Cargando…</p>}>
+      <Suspense fallback={<p className="mt-8 text-tinta-suave">Cargando…</p>}>
         <ListaHipicas />
       </Suspense>
-    </main>
+    </Pantalla>
   );
 }
 
@@ -51,34 +47,39 @@ async function ListaHipicas() {
   if (!data.length) redirect("/nueva-hipica");
 
   return (
-    <ul className="mt-6 space-y-3">
-      {data.map((m) => (
-        <li key={m.hipicas?.id} className="rounded-lg border border-neutral-200">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-            <div>
-              <p className="font-medium">{m.hipicas?.nombre}</p>
-              <p className="text-sm text-neutral-600">{ROLES[m.rol]}</p>
-            </div>
-            {m.hipicas && (
-              <nav className="flex flex-wrap gap-2" aria-label={`Opciones de ${m.hipicas.nombre}`}>
-                <Link href={`/hipica/${m.hipicas.id}`} className={enlace}>
-                  Horario
-                </Link>
-                {m.rol === "admin" && (
-                  <>
-                    <Link href={`/hipica/${m.hipicas.id}/clases`} className={enlace}>
-                      Clases
-                    </Link>
-                    <Link href={`/hipica/${m.hipicas.id}/miembros`} className={enlace}>
-                      Miembros
-                    </Link>
-                  </>
-                )}
-              </nav>
-            )}
-          </div>
-        </li>
-      ))}
+    <ul className="mt-8 space-y-4">
+      {data.map(
+        (m) =>
+          m.hipicas && (
+            <li key={m.hipicas.id} className="overflow-hidden rounded-xl border border-linea bg-white">
+              <Link
+                href={`/hipica/${m.hipicas.id}`}
+                className="group flex items-center justify-between gap-4 px-5 py-5 hover:bg-alfalfa-suave"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xl font-bold [font-stretch:85%]">{m.hipicas.nombre}</p>
+                  <p className="text-sm text-tinta-suave">{ROLES[m.rol]}</p>
+                </div>
+                <span className="shrink-0 font-semibold text-cuadra">
+                  Ver horario
+                  <svg aria-hidden="true" viewBox="0 0 16 16" className="ml-1 inline size-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="m6 3 5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </Link>
+              {m.rol === "admin" && (
+                <div className="flex gap-2 border-t border-linea bg-limo/50 px-5 py-3">
+                  <Link href={`/hipica/${m.hipicas.id}/clases`} className={`${botonSecundario} flex-1 sm:flex-none`}>
+                    Clases
+                  </Link>
+                  <Link href={`/hipica/${m.hipicas.id}/miembros`} className={`${botonSecundario} flex-1 sm:flex-none`}>
+                    Miembros
+                  </Link>
+                </div>
+              )}
+            </li>
+          ),
+      )}
     </ul>
   );
 }

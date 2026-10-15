@@ -1,19 +1,20 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { createClient, getUserId } from "@/lib/supabase/server";
+import { Aviso, Pantalla, boton, campo, etiqueta } from "@/components/app/ui";
 import { aceptarInvitacion } from "./actions";
 
 const ROLES: Record<string, string> = { monitor: "monitor", alumno: "alumno" };
 
 export default function UnirsePage({ params, searchParams }: PageProps<"/unirse/[token]">) {
   return (
-    <main className="flex flex-1 items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm space-y-6">
-        <Suspense fallback={<p className="text-sm text-neutral-500">Cargando…</p>}>
+    <Pantalla ancho="estrecho">
+      <div className="space-y-8 pt-8 sm:pt-16">
+        <Suspense fallback={<p className="text-tinta-suave">Cargando…</p>}>
           <Contenido params={params} searchParams={searchParams} />
         </Suspense>
       </div>
-    </main>
+    </Pantalla>
   );
 }
 
@@ -28,14 +29,14 @@ async function Contenido({ params, searchParams }: PageProps<"/unirse/[token]">)
     return (
       <>
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Te han invitado</h1>
-          <p className="text-sm text-neutral-600">
+          <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Te han invitado</h1>
+          <p className="text-tinta-suave">
             Para unirte a tu hípica, entra con tu email. Te mandaremos un enlace.
           </p>
         </div>
         <Link
           href={`/login?next=${encodeURIComponent(aqui)}`}
-          className="block w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-center font-medium text-white hover:bg-neutral-800"
+          className={`${boton} w-full`}
         >
           Entrar con mi email
         </Link>
@@ -50,11 +51,11 @@ async function Contenido({ params, searchParams }: PageProps<"/unirse/[token]">)
   if (!inv) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Invitación no válida</h1>
-        <p className="text-sm text-neutral-600">
+        <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Invitación no válida</h1>
+        <p className="text-tinta-suave">
           El enlace ha caducado o ya se ha usado. Pide uno nuevo a tu hípica.
         </p>
-        <Link href="/" className="text-sm underline">
+        <Link href="/" className="font-semibold text-cuadra underline">
           Ir al inicio
         </Link>
       </div>
@@ -64,8 +65,8 @@ async function Contenido({ params, searchParams }: PageProps<"/unirse/[token]">)
   return (
     <>
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Únete a {inv.hipica_nombre}</h1>
-        <p className="text-sm text-neutral-600">
+        <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Únete a {inv.hipica_nombre}</h1>
+        <p className="text-tinta-suave">
           Entrarás como {ROLES[inv.rol] ?? inv.rol}. Dinos cómo te llamas para que la hípica te
           reconozca.
         </p>
@@ -73,7 +74,7 @@ async function Contenido({ params, searchParams }: PageProps<"/unirse/[token]">)
       <form action={aceptarInvitacion} className="space-y-4">
         <input type="hidden" name="token" value={token} />
         <div className="space-y-2">
-          <label htmlFor="nombre" className="text-sm font-medium">
+          <label htmlFor="nombre" className={etiqueta}>
             Nombre y apellido
           </label>
           <input
@@ -82,16 +83,16 @@ async function Contenido({ params, searchParams }: PageProps<"/unirse/[token]">)
             required
             maxLength={120}
             autoComplete="name"
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-base outline-none focus:border-neutral-900"
+            className={campo}
           />
         </div>
-        {error === "nombre" && <p className="text-sm text-red-700">Escribe tu nombre.</p>}
+        {error === "nombre" && <Aviso tipo="error">Escribe tu nombre.</Aviso>}
         {error === "invalida" && (
-          <p className="text-sm text-red-700">No se ha podido usar la invitación. Pide una nueva.</p>
+          <Aviso tipo="error">No se ha podido usar la invitación. Pide una nueva.</Aviso>
         )}
         <button
           type="submit"
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white hover:bg-neutral-800"
+          className={`${boton} w-full`}
         >
           Unirme
         </button>

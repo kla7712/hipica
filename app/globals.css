@@ -128,3 +128,35 @@
     @apply font-sans;
   }
 }
+
+/* ------------------------------------------------------------------
+   Marca de la app de la hípica. Pegar AL FINAL de app/globals.css.
+   ------------------------------------------------------------------ */
+@theme {
+  --color-limo: #f3f4ef;          /* fondo: pared encalada */
+  --color-tinta: #1c2620;         /* texto principal */
+  --color-tinta-suave: #56605a;   /* texto secundario */
+  --color-linea: #dadfd6;         /* bordes y separadores */
+  --color-cuadra: #1f4d3a;        /* verde guarnicionería: acciones */
+  --color-cuadra-hover: #173c2d;
+  --color-alfalfa: #d9e58a;       /* tu plaza / destacado */
+  --color-alfalfa-suave: #f2f6d6;
+  --color-alerta: #a8321f;        /* cancelar, errores */
+  --color-alerta-suave: #fbeeeb;
+  --font-marca: "Archivo Variable", system-ui, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-limo);
+  color: var(--color-tinta);
+  font-family: var(--font-marca);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cuadra);
+  outline-offset: 2px;
+}

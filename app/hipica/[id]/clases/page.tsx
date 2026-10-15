@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
+import { Pantalla, Volver } from "@/components/app/ui";
 import { cambiarEstadoClase, crearClase, generarCalendario } from "./actions";
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -21,20 +21,18 @@ type Clase = {
 type Persona = { id: string; nombre: string; rol: string };
 
 const input =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base outline-none focus:border-neutral-900";
+  "w-full rounded-lg border border-linea bg-white px-3 py-2.5 text-base text-tinta outline-none focus:border-cuadra";
 const boton =
-  "rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white hover:bg-neutral-800";
+  "inline-flex min-h-11 items-center justify-center rounded-lg bg-cuadra px-4 font-semibold text-white hover:bg-cuadra-hover";
 
 export default function ClasesPage({ params, searchParams }: PageProps<"/hipica/[id]/clases">) {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <Link href="/" className="text-sm text-neutral-600 hover:text-neutral-900">
-        ← Tus hípicas
-      </Link>
-      <Suspense fallback={<p className="mt-6 text-sm text-neutral-500">Cargando…</p>}>
+    <Pantalla>
+      <Volver href="/">Tus hípicas</Volver>
+      <Suspense fallback={<p className="mt-6 text-sm text-tinta-suave">Cargando…</p>}>
         <Contenido params={params} searchParams={searchParams} />
       </Suspense>
-    </main>
+    </Pantalla>
   );
 }
 
@@ -56,7 +54,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
     .maybeSingle<{ rol: string; hipicas: { nombre: string } | null }>();
   if (!yo) notFound();
   if (yo.rol !== "admin") {
-    return <p className="mt-6">Solo el administrador puede gestionar las clases.</p>;
+    return <p className="mt-8 text-tinta-suave">Solo el administrador puede gestionar las clases.</p>;
   }
 
   const [{ data: clases, error }, { data: equipo }] = await Promise.all([
@@ -87,8 +85,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
   return (
     <div className="mt-4 space-y-10">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Clases</h1>
-        <p className="text-sm text-neutral-600">{yo.hipicas?.nombre} · horario semanal</p>
+        <h1 className="text-3xl font-bold tracking-tight [font-stretch:85%] sm:text-4xl">Clases</h1>
+        <p className="text-sm text-tinta-suave">{yo.hipicas?.nombre} · horario semanal</p>
       </div>
 
       {aviso && (
@@ -96,8 +94,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
           role="status"
           className={`rounded-lg border p-3 text-sm ${
             aviso.tipo === "error"
-              ? "border-red-200 bg-red-50 text-red-800"
-              : "border-emerald-200 bg-emerald-50 text-emerald-900"
+              ? "border-alerta/30 bg-alerta-suave text-alerta"
+              : "border-cuadra/25 bg-alfalfa-suave text-tinta"
           }`}
         >
           {aviso.texto}
@@ -107,25 +105,25 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
       {/* Horario semanal */}
       <section className="space-y-6">
         {porDia.length === 0 && (
-          <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-600">
+          <p className="rounded-xl border border-dashed border-linea bg-white/60 px-6 py-10 text-center text-tinta-suave">
             Aún no hay clases. Crea la primera con el formulario de abajo.
           </p>
         )}
         {porDia.map((dia) => (
           <div key={dia.nombre} className="space-y-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            <h2 className="text-lg font-bold [font-stretch:85%]">
               {dia.nombre}
             </h2>
-            <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200">
+            <ul className="divide-y divide-linea overflow-hidden rounded-xl border border-linea bg-white">
               {dia.clases.map((c) => (
                 <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
-                  <div className="w-14 font-mono text-sm">{c.hora_inicio.slice(0, 5)}</div>
+                  <div className="w-16 shrink-0 text-[1.75rem] font-bold leading-none tabular-nums tracking-tight [font-stretch:68%]">{c.hora_inicio.slice(0, 5)}</div>
                   <div className="min-w-0 flex-1">
-                    <p className={`font-medium ${c.activa ? "" : "text-neutral-400 line-through"}`}>
+                    <p className={`font-semibold ${c.activa ? "" : "text-tinta-suave/60 line-through"}`}>
                       {c.titulo}
-                      {c.nivel && <span className="font-normal text-neutral-500"> · {c.nivel}</span>}
+                      {c.nivel && <span className="font-normal text-tinta-suave"> · {c.nivel}</span>}
                     </p>
-                    <p className="text-sm text-neutral-600">
+                    <p className="text-sm text-tinta-suave">
                       {c.duracion_min} min · {c.plazas} plazas
                       {c.monitor && ` · ${c.monitor.nombre}`}
                       {!c.activa && " · pausada"}
@@ -137,7 +135,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
                     <input type="hidden" name="activa" value={String(!c.activa)} />
                     <button
                       type="submit"
-                      className="rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50"
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg border border-linea bg-white px-3 text-sm font-semibold hover:border-tinta-suave"
                     >
                       {c.activa ? "Pausar" : "Reactivar"}
                     </button>
@@ -151,10 +149,10 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
 
       {/* Generar calendario */}
       {porDia.length > 0 && (
-        <section className="space-y-3 rounded-lg border border-neutral-200 bg-neutral-50 p-5">
+        <section className="space-y-3 rounded-xl border border-linea bg-white p-5">
           <div>
             <h2 className="font-semibold">Publicar el calendario</h2>
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-tinta-suave">
               Crea las clases concretas de las próximas semanas para que los alumnos puedan
               reservar. Puedes repetirlo cuando quieras: no duplica las que ya existen.
             </p>
@@ -162,7 +160,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
           <form action={generarCalendario} className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="hipica_id" value={id} />
             <div className="space-y-1">
-              <label htmlFor="semanas" className="text-sm font-medium">
+              <label htmlFor="semanas" className="text-sm font-semibold">
                 Semanas
               </label>
               <select id="semanas" name="semanas" defaultValue="4" className={input}>
@@ -184,13 +182,13 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
         <form action={crearClase} className="grid gap-4 sm:grid-cols-2">
           <input type="hidden" name="hipica_id" value={id} />
           <div className="space-y-1 sm:col-span-2">
-            <label htmlFor="titulo" className="text-sm font-medium">
+            <label htmlFor="titulo" className="text-sm font-semibold">
               Nombre de la clase
             </label>
             <input id="titulo" name="titulo" required maxLength={120} placeholder="Iniciación" className={input} />
           </div>
           <div className="space-y-1">
-            <label htmlFor="dia_semana" className="text-sm font-medium">
+            <label htmlFor="dia_semana" className="text-sm font-semibold">
               Día
             </label>
             <select id="dia_semana" name="dia_semana" required defaultValue="1" className={input}>
@@ -202,32 +200,32 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
             </select>
           </div>
           <div className="space-y-1">
-            <label htmlFor="hora_inicio" className="text-sm font-medium">
+            <label htmlFor="hora_inicio" className="text-sm font-semibold">
               Hora de inicio
             </label>
             <input id="hora_inicio" name="hora_inicio" type="time" required defaultValue="18:00" className={input} />
           </div>
           <div className="space-y-1">
-            <label htmlFor="duracion_min" className="text-sm font-medium">
+            <label htmlFor="duracion_min" className="text-sm font-semibold">
               Duración (min)
             </label>
             <input id="duracion_min" name="duracion_min" type="number" required min={15} max={480} step={15} defaultValue={60} className={input} />
           </div>
           <div className="space-y-1">
-            <label htmlFor="plazas" className="text-sm font-medium">
+            <label htmlFor="plazas" className="text-sm font-semibold">
               Plazas
             </label>
             <input id="plazas" name="plazas" type="number" required min={1} max={100} defaultValue={6} className={input} />
           </div>
           <div className="space-y-1">
-            <label htmlFor="nivel" className="text-sm font-medium">
-              Nivel <span className="font-normal text-neutral-500">(opcional)</span>
+            <label htmlFor="nivel" className="text-sm font-semibold">
+              Nivel <span className="font-normal text-tinta-suave">(opcional)</span>
             </label>
             <input id="nivel" name="nivel" maxLength={60} placeholder="Principiante" className={input} />
           </div>
           <div className="space-y-1">
-            <label htmlFor="monitor_id" className="text-sm font-medium">
-              Monitor <span className="font-normal text-neutral-500">(opcional)</span>
+            <label htmlFor="monitor_id" className="text-sm font-semibold">
+              Monitor <span className="font-normal text-tinta-suave">(opcional)</span>
             </label>
             <select id="monitor_id" name="monitor_id" defaultValue="" className={input}>
               <option value="">Sin asignar</option>

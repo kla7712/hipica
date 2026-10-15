@@ -1,8 +1,8 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
+import { Pantalla, Volver } from "@/components/app/ui";
 import { borrarInvitacion, crearInvitacion } from "./actions";
 
 const ROLES: Record<string, string> = { admin: "Administrador", monitor: "Monitor", alumno: "Alumno" };
@@ -12,14 +12,12 @@ type Invitacion = { id: string; rol: string; token: string; usos: number; usos_m
 
 export default function MiembrosPage({ params, searchParams }: PageProps<"/hipica/[id]/miembros">) {
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
-      <Link href="/" className="text-sm text-neutral-600 hover:text-neutral-900">
-        ← Tus hípicas
-      </Link>
-      <Suspense fallback={<p className="mt-6 text-sm text-neutral-500">Cargando…</p>}>
+    <Pantalla>
+      <Volver href="/">Tus hípicas</Volver>
+      <Suspense fallback={<p className="mt-6 text-sm text-tinta-suave">Cargando…</p>}>
         <Contenido params={params} searchParams={searchParams} />
       </Suspense>
-    </main>
+    </Pantalla>
   );
 }
 
@@ -39,7 +37,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
     .maybeSingle<{ rol: string; hipicas: { nombre: string } | null }>();
   if (!yo) notFound();
   if (yo.rol !== "admin") {
-    return <p className="mt-6">Solo el administrador puede gestionar los miembros.</p>;
+    return <p className="mt-8 text-tinta-suave">Solo el administrador puede gestionar los miembros.</p>;
   }
 
   const ahora = new Date().toISOString();
@@ -72,12 +70,12 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
   return (
     <div className="mt-4 space-y-10">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Miembros</h1>
-        <p className="text-sm text-neutral-600">{yo.hipicas?.nombre}</p>
+        <h1 className="text-3xl font-bold tracking-tight [font-stretch:85%] sm:text-4xl">Miembros</h1>
+        <p className="text-sm text-tinta-suave">{yo.hipicas?.nombre}</p>
       </div>
 
       {errorQuery === "invitar" && (
-        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <p className="rounded-lg border border-alerta/30 bg-alerta-suave px-4 py-3 text-sm text-alerta">
           No se ha podido crear la invitación. Vuelve a intentarlo.
         </p>
       )}
@@ -86,7 +84,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
       <section className="space-y-4">
         <div>
           <h2 className="font-semibold">Invitar</h2>
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-tinta-suave">
             Comparte el enlace por WhatsApp. Quien lo abra entra con su email y queda unido a tu hípica.
           </p>
         </div>
@@ -94,14 +92,14 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
           <form action={crearInvitacion}>
             <input type="hidden" name="hipica_id" value={id} />
             <input type="hidden" name="rol" value="alumno" />
-            <button type="submit" className="rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white hover:bg-neutral-800">
+            <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cuadra px-4 font-semibold text-white hover:bg-cuadra-hover">
               Enlace para alumnos
             </button>
           </form>
           <form action={crearInvitacion}>
             <input type="hidden" name="hipica_id" value={id} />
             <input type="hidden" name="rol" value="monitor" />
-            <button type="submit" className="rounded-lg border border-neutral-300 px-4 py-2.5 font-medium hover:bg-neutral-50">
+            <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-linea bg-white px-4 font-semibold hover:border-tinta-suave">
               Invitar a un monitor
             </button>
           </form>
@@ -113,10 +111,10 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
               const url = `${base}/unirse/${inv.token}`;
               const texto = `Únete a ${yo.hipicas?.nombre} para reservar tus clases: ${url}`;
               return (
-                <li key={inv.id} className="space-y-3 rounded-lg border border-neutral-200 p-4">
+                <li key={inv.id} className="space-y-3 rounded-xl border border-linea bg-white p-4">
                   <p className="text-sm">
-                    <span className="font-medium">{inv.rol === "alumno" ? "Alumnos" : "Monitor"}</span>
-                    <span className="text-neutral-600">
+                    <span className="font-semibold">{inv.rol === "alumno" ? "Alumnos" : "Monitor"}</span>
+                    <span className="text-tinta-suave">
                       {" · "}
                       {inv.usos_max === null ? `${inv.usos} ${inv.usos === 1 ? "uso" : "usos"}` : "un solo uso"}
                       {" · caduca el "}
@@ -130,21 +128,21 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
                     id={`url-${inv.id}`}
                     readOnly
                     value={url}
-                    className="w-full rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 font-mono text-xs"
+                    className="w-full rounded-lg border border-linea bg-limo px-3 py-2 text-sm text-tinta-suave"
                   />
                   <div className="flex flex-wrap gap-3">
                     <a
                       href={`https://wa.me/?text=${encodeURIComponent(texto)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cuadra px-4 text-sm font-semibold text-white hover:bg-cuadra-hover"
                     >
                       Enviar por WhatsApp
                     </a>
                     <form action={borrarInvitacion}>
                       <input type="hidden" name="hipica_id" value={id} />
                       <input type="hidden" name="invitacion_id" value={inv.id} />
-                      <button type="submit" className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50">
+                      <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-linea bg-white px-4 text-sm font-semibold hover:border-tinta-suave">
                         Desactivar
                       </button>
                     </form>
@@ -159,14 +157,14 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
       {/* Lista de miembros */}
       <section className="space-y-3">
         <h2 className="font-semibold">Miembros ({miembros?.length ?? 0})</h2>
-        <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200">
+        <ul className="divide-y divide-linea overflow-hidden rounded-xl border border-linea bg-white">
           {(miembros ?? []).map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-4 p-4">
               <div>
-                <p className="font-medium">{m.nombre}</p>
-                {m.telefono && <p className="text-sm text-neutral-600">{m.telefono}</p>}
+                <p className="font-semibold">{m.nombre}</p>
+                {m.telefono && <p className="text-sm text-tinta-suave">{m.telefono}</p>}
               </div>
-              <span className="text-sm text-neutral-600">{ROLES[m.rol] ?? m.rol}</span>
+              <span className="text-sm text-tinta-suave">{ROLES[m.rol] ?? m.rol}</span>
             </li>
           ))}
         </ul>
