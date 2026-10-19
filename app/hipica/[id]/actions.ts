@@ -4,19 +4,20 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UUID } from "@/lib/rutas";
 
-// Mensajes de la base de datos que se pueden enseñar tal cual al alumno.
-const MENSAJES_CONOCIDOS = [
-  "No quedan plazas",
-  "Ya tienes plaza en esta clase",
-  "La clase está cancelada",
-  "La clase ya ha empezado",
-  "Ya no se puede anular",
-  "No puedes anular esta reserva",
+// La URL solo lleva un código; el texto lo pone la página (evita que alguien
+// fabrique enlaces con mensajes falsos, p. ej. "llama a este teléfono").
+const CODIGOS: [string, string][] = [
+  ["No quedan plazas", "completa"],
+  ["Ya tienes plaza en esta clase", "repetida"],
+  ["La clase está cancelada", "cancelada"],
+  ["La clase ya ha empezado", "empezada"],
+  ["Ya no se puede anular", "plazo"],
+  ["No puedes anular esta reserva", "ajena"],
 ];
 
 function volver(hipicaId: string, mensaje?: string): never {
-  const aviso = mensaje && MENSAJES_CONOCIDOS.find((m) => mensaje.startsWith(m)) ? mensaje : mensaje ? "Algo ha fallado. Vuelve a intentarlo." : null;
-  redirect(`/hipica/${hipicaId}${aviso ? `?aviso=${encodeURIComponent(aviso)}` : ""}`);
+  const codigo = mensaje ? (CODIGOS.find(([m]) => mensaje.startsWith(m))?.[1] ?? "error") : null;
+  redirect(`/hipica/${hipicaId}${codigo ? `?aviso=${codigo}` : ""}`);
 }
 
 export async function reservar(formData: FormData) {

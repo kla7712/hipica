@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { Pantalla, Volver } from "@/components/app/ui";
-import { borrarInvitacion, crearInvitacion } from "./actions";
+import { borrarInvitacion, crearInvitacion, darDeBaja } from "./actions";
 
 const ROLES: Record<string, string> = { admin: "Administrador", monitor: "Monitor", alumno: "Alumno" };
 
@@ -74,6 +74,11 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         <p className="text-sm text-tinta-suave">{yo.hipicas?.nombre}</p>
       </div>
 
+      {errorQuery === "baja" && (
+        <p className="rounded-lg border border-alerta/30 bg-alerta-suave px-4 py-3 text-sm text-alerta">
+          No se ha podido dar de baja a ese miembro.
+        </p>
+      )}
       {errorQuery === "invitar" && (
         <p className="rounded-lg border border-alerta/30 bg-alerta-suave px-4 py-3 text-sm text-alerta">
           No se ha podido crear la invitación. Vuelve a intentarlo.
@@ -159,12 +164,32 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         <h2 className="font-semibold">Miembros ({miembros?.length ?? 0})</h2>
         <ul className="divide-y divide-linea overflow-hidden rounded-xl border border-linea bg-white">
           {(miembros ?? []).map((m) => (
-            <li key={m.id} className="flex items-center justify-between gap-4 p-4">
-              <div>
+            <li key={m.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
+              <div className="min-w-0">
                 <p className="font-semibold">{m.nombre}</p>
-                {m.telefono && <p className="text-sm text-tinta-suave">{m.telefono}</p>}
+                <p className="text-sm text-tinta-suave">
+                  {ROLES[m.rol] ?? m.rol}
+                  {m.telefono && <>, {m.telefono}</>}
+                </p>
               </div>
-              <span className="text-sm text-tinta-suave">{ROLES[m.rol] ?? m.rol}</span>
+              {m.rol !== "admin" && (
+                <details className="group text-sm">
+                  <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-lg px-3 font-medium text-tinta-suave hover:text-alerta">
+                    Dar de baja
+                  </summary>
+                  <form action={darDeBaja} className="mt-2 space-y-2 rounded-lg border border-alerta/30 bg-alerta-suave p-3">
+                    <input type="hidden" name="hipica_id" value={id} />
+                    <input type="hidden" name="miembro_id" value={m.id} />
+                    <p className="text-alerta">
+                      {m.nombre} dejará de ver la hípica y se anularán sus reservas futuras. No podrá volver a
+                      entrar con un enlace.
+                    </p>
+                    <button type="submit" className="inline-flex min-h-11 items-center rounded-lg bg-alerta px-4 font-semibold text-white hover:brightness-90">
+                      Confirmar baja
+                    </button>
+                  </form>
+                </details>
+              )}
             </li>
           ))}
         </ul>

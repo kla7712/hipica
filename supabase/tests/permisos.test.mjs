@@ -131,8 +131,8 @@ check('alumno 2 no ve reservas ajenas', verA2 === 0);
 check('el monitor ve las reservas de su hípica', verMon === 1);
 
 const nombres = (await as(U.alumno1, `select nombre from public.miembros order by nombre`)).rows.map(r => r.nombre);
-check('un alumno ve admin, monitor y a sí mismo, no a otros alumnos',
-  JSON.stringify(nombres) === JSON.stringify(['Alumno Uno', 'Ana', 'Mónica']), JSON.stringify(nombres));
+check('un alumno solo ve su propia ficha',
+  JSON.stringify(nombres) === JSON.stringify(['Alumno Uno']), JSON.stringify(nombres));
 
 await expectError('un alumno no puede hacerse admin', U.alumno1,
   `update public.miembros set rol = 'admin' where user_id = auth.uid()`, [], /administrador/);
@@ -200,6 +200,27 @@ if (migrations.length > 1) {
   check('ver_invitacion no muestra invitaciones gastadas', gastada.length === 0);
   const falsa = (await as(U.intruso, `select * from public.ver_invitacion('nope')`)).rows;
   check('ver_invitacion no muestra tokens falsos', falsa.length === 0);
+}
+
+if (migrations.length > 2) {
+  console.log('Dar de baja (0003)');
+  const idA1 = one(await as(U.adminA, `select id from public.miembros where user_id = $1`, [U.alumno1]));
+  const futura = one(await as(U.adminA, `
+    insert into public.sesiones (hipica_id, titulo, inicio, fin, plazas)
+    values ($1, 'Futura', now() + interval '5 days', now() + interval '5 days 1 hour', 4) returning id`, [h1]));
+  const rf = one(await as(U.alumno1, `select public.reservar($1)`, [futura]));
+  await expectError('un monitor no puede dar de baja', U.monitor, `select public.dar_de_baja($1)`, [idA1], /Solo el administrador/);
+  const idAdminA = one(await as(U.adminA, `select id from public.miembros where user_id = auth.uid()`));
+  await expectError('el admin no se da de baja a sí mismo', U.adminA, `select public.dar_de_baja($1)`, [idAdminA], /ti mismo/);
+  await as(U.adminA, `select public.dar_de_baja($1)`, [idA1]);
+  const est = one(await as(U.adminA, `select estado::text from public.reservas where id = $1`, [rf]));
+  check('al dar de baja se anulan sus reservas futuras', est === 'anulada', est);
+  const ve = (await as(U.alumno1, `select count(*)::int as n from public.hipicas`)).rows[0].n;
+  check('el alumno dado de baja ya no ve la hípica', ve === 0);
+  await expectError('el alumno dado de baja no puede reservar', U.alumno1, `select public.reservar($1)`, [futura], /No perteneces/);
+  const intentos = [];
+  for (let i = 0; i < 5; i++) intentos.push(await as(U.otro, `select public.crear_hipica($1, 'X')`, [`H${i}`]).then(() => 1, () => 0));
+  check('máximo 3 hípicas por cuenta', intentos.reduce((a, b) => a + b, 0) === 3, JSON.stringify(intentos));
 }
 
 console.log(`\n${ok} correctas, ${fail} fallidas`);

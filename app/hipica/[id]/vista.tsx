@@ -17,6 +17,16 @@ export type Sesion = {
 
 export const DIAS_VISTA = 14;
 
+const AVISOS: Record<string, string> = {
+  completa: "No quedan plazas en esa clase.",
+  repetida: "Ya tienes plaza en esa clase.",
+  cancelada: "Esa clase está cancelada.",
+  empezada: "Esa clase ya ha empezado.",
+  plazo: "Ya no se puede anular: ha pasado el plazo.",
+  ajena: "No puedes anular esa reserva.",
+  error: "Algo ha fallado. Vuelve a intentarlo.",
+};
+
 type Props = {
   id: string;
   hipica: { nombre: string; zona_horaria: string; horas_minimas_anulacion: number };
@@ -61,7 +71,7 @@ export function HorarioVista({ id, hipica, rol, sesiones, aviso, ahora }: Props)
         detalle={`Puedes anular hasta ${hipica.horas_minimas_anulacion} horas antes de la clase.`}
       />
 
-      {aviso && <Aviso tipo="error">{aviso}</Aviso>}
+      {aviso && Object.hasOwn(AVISOS, aviso) && <Aviso tipo="error">{AVISOS[aviso]}</Aviso>}
 
       {proxima && (
         <div className="flex items-center gap-4 rounded-xl bg-cuadra px-5 py-4 text-white">

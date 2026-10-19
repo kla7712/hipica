@@ -28,14 +28,16 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 
 async function Formulario({ searchParams }: Pick<PageProps<"/login">, "searchParams">) {
   const { enviado, error, next } = await searchParams;
-  const mensajeError = typeof error === "string" ? ERRORES[error] : undefined;
+  const mensajeError = typeof error === "string" && Object.hasOwn(ERRORES, error) ? ERRORES[error] : undefined;
 
   if (typeof enviado === "string") {
+    // Solo se muestra si parece un email, para que no se pueda usar la URL para enseñar otro texto.
+    const email = /^[^\s@<>]{1,64}@[^\s@<>]{1,190}$/.test(enviado) ? enviado : null;
     return (
       <div className="space-y-3 rounded-xl border border-linea bg-white p-5">
         <p className="text-lg font-semibold">Revisa tu correo</p>
         <p className="text-tinta-suave">
-          Hemos enviado un enlace a <strong className="text-tinta">{enviado}</strong>. Ábrelo en este mismo
+          Hemos enviado un enlace{email && <> a <strong className="text-tinta">{email}</strong></>}. Ábrelo en este mismo
           navegador para entrar. Si no llega en un minuto, mira en spam.
         </p>
       </div>

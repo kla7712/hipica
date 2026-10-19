@@ -250,13 +250,13 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
 function textoAviso(q: Record<string, string | string[] | undefined>) {
   if (q.ok === "creada") return { tipo: "ok", texto: "Clase añadida al horario." };
   if (typeof q.generadas === "string") {
-    const n = Number(q.generadas);
+    const n = Math.max(0, Math.floor(Number(q.generadas) || 0));
     return {
       tipo: "ok",
       texto:
         n === 0
           ? "El calendario ya estaba al día: no había clases nuevas que crear."
-          : `Calendario publicado: ${n} clases creadas para las próximas ${q.semanas} semanas.`,
+          : `Calendario publicado: ${n} clases creadas para las próximas ${[2, 4, 8].includes(Number(q.semanas)) ? Number(q.semanas) : ""} semanas.`,
     };
   }
   const errores: Record<string, string> = {
@@ -264,7 +264,7 @@ function textoAviso(q: Record<string, string | string[] | undefined>) {
     crear: "No se ha podido crear la clase. Vuelve a intentarlo.",
     generar: "No se ha podido publicar el calendario. Vuelve a intentarlo.",
   };
-  if (typeof q.error === "string" && errores[q.error]) {
+  if (typeof q.error === "string" && Object.hasOwn(errores, q.error)) {
     return { tipo: "error", texto: errores[q.error] };
   }
   return null;

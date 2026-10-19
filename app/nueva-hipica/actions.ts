@@ -19,7 +19,7 @@ export async function crearHipica(formData: FormData) {
 
   if (error) {
     console.error("crear_hipica:", error.message);
-    redirect("/nueva-hipica?error=crear");
+    redirect(`/nueva-hipica?error=${error.message.includes("máximo") ? "limite" : "crear"}`);
   }
   redirect("/");
 }

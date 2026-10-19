@@ -5,6 +5,7 @@ import { crearHipica } from "./actions";
 const ERRORES: Record<string, string> = {
   datos: "Rellena los dos campos.",
   crear: "No se ha podido crear la hípica. Vuelve a intentarlo.",
+  limite: "Has llegado al máximo de 3 hípicas por cuenta.",
 };
 
 export default function NuevaHipicaPage({ searchParams }: PageProps<"/nueva-hipica">) {
@@ -49,6 +50,6 @@ export default function NuevaHipicaPage({ searchParams }: PageProps<"/nueva-hipi
 
 async function MensajeError({ searchParams }: Pick<PageProps<"/nueva-hipica">, "searchParams">) {
   const { error } = await searchParams;
-  const mensaje = typeof error === "string" ? ERRORES[error] : undefined;
+  const mensaje = typeof error === "string" && Object.hasOwn(ERRORES, error) ? ERRORES[error] : undefined;
   return mensaje ? <Aviso tipo="error">{mensaje}</Aviso> : null;
 }

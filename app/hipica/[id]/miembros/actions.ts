@@ -42,3 +42,18 @@ export async function borrarInvitacion(formData: FormData) {
   if (error) console.error("borrar invitación:", error.message);
   refresh();
 }
+
+// Solo admin: da de baja a un miembro (deja de ver la hípica y se anulan sus reservas futuras).
+export async function darDeBaja(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  const miembroId = String(formData.get("miembro_id") ?? "");
+  if (!UUID.test(hipicaId) || !UUID.test(miembroId)) redirect("/");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("dar_de_baja", { p_miembro: miembroId });
+  if (error) {
+    console.error("dar_de_baja:", error.message);
+    redirect(`/hipica/${hipicaId}/miembros?error=baja`);
+  }
+  refresh();
+}
