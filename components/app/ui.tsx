@@ -86,14 +86,25 @@ export function Hora({ inicio, fin, apagada = false }: { inicio: string; fin?: s
 
 /* ---------- Plazas: una casilla por plaza ---------- */
 
-export function Plazas({ plazas, ocupadas, mia = false }: { plazas: number; ocupadas: number; mia?: boolean }) {
+export function Plazas({
+  plazas,
+  ocupadas,
+  mias = 0,
+  etiquetaMia = "Tienes plaza",
+}: {
+  plazas: number;
+  ocupadas: number;
+  mias?: number; // cuántas de las ocupadas son tuyas (tú o tus jinetes)
+  etiquetaMia?: string;
+}) {
   const llenas = Math.min(ocupadas, plazas);
   const libres = plazas - llenas;
-  const texto = mia
-    ? "Tienes plaza"
-    : libres === 0
-      ? "Completa"
-      : `${libres} ${libres === 1 ? "plaza libre" : "plazas libres"}`;
+  const texto =
+    mias > 0
+      ? etiquetaMia
+      : libres === 0
+        ? "Completa"
+        : `${libres} ${libres === 1 ? "plaza libre" : "plazas libres"}`;
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -101,7 +112,7 @@ export function Plazas({ plazas, ocupadas, mia = false }: { plazas: number; ocup
         <div className="flex gap-1" aria-hidden="true">
           {Array.from({ length: plazas }, (_, i) => {
             const ocupada = i < llenas;
-            const esMia = mia && i === llenas - 1;
+            const esMia = ocupada && i >= llenas - mias;
             return (
               <span
                 key={i}
@@ -117,8 +128,9 @@ export function Plazas({ plazas, ocupadas, mia = false }: { plazas: number; ocup
           })}
         </div>
       )}
-      <span className={`text-sm ${mia ? "font-semibold text-cuadra" : libres === 0 ? "text-tinta-suave" : "text-tinta"}`}>
+      <span className={`text-sm ${mias > 0 ? "font-semibold text-cuadra" : libres === 0 ? "text-tinta-suave" : "text-tinta"}`}>
         {texto}
+        {mias > 0 && libres > 0 && <span className="font-normal text-tinta-suave">, quedan {libres}</span>}
         <span className="sr-only">. {llenas} de {plazas} plazas ocupadas.</span>
       </span>
     </div>

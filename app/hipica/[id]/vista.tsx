@@ -12,10 +12,16 @@ export type Sesion = {
   ocupadas: number;
   cancelada: boolean;
   monitor: string | null;
-  mi_reserva: string | null;
+  mias: { reserva: string; miembro: string; nombre: string }[];
 };
 
+// Personas para las que el usuario puede reservar: él mismo y sus jinetes a cargo.
+export type Jinete = { id: string; nombre: string; yo: boolean };
+
 export const DIAS_VISTA = 14;
+
+const botonFamilia =
+  "inline-flex min-h-11 items-center justify-center rounded-lg border border-cuadra/60 bg-white px-4 py-2.5 font-semibold text-cuadra transition-colors hover:bg-alfalfa-suave";
 
 const AVISOS: Record<string, string> = {
   completa: "No quedan plazas en esa clase.",
@@ -24,6 +30,7 @@ const AVISOS: Record<string, string> = {
   empezada: "Esa clase ya ha empezado.",
   plazo: "Ya no se puede anular: ha pasado el plazo.",
   ajena: "No puedes anular esa reserva.",
+  persona: "No puedes reservar para esa persona.",
   error: "Algo ha fallado. Vuelve a intentarlo.",
 };
 
@@ -32,13 +39,18 @@ type Props = {
   hipica: { nombre: string; zona_horaria: string; horas_minimas_anulacion: number };
   rol: string;
   sesiones: Sesion[];
+  jinetes: Jinete[];
   aviso?: string;
   ahora: Date;
 };
 
+const unir = (nombres: string[]) =>
+  nombres.length <= 1 ? (nombres[0] ?? "") : `${nombres.slice(0, -1).join(", ")} y ${nombres.at(-1)}`;
+
 // La parte visual del horario, separada de la carga de datos.
-export function HorarioVista({ id, hipica, rol, sesiones, aviso, ahora }: Props) {
+export function HorarioVista({ id, hipica, rol, sesiones, jinetes, aviso, ahora }: Props) {
   const esStaff = rol === "admin" || rol === "monitor";
+  const familia = jinetes.length > 1;
   const tz = hipica.zona_horaria;
   const fClave = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
   const fDia = new Intl.DateTimeFormat("es-ES", { timeZone: tz, weekday: "long", day: "numeric", month: "long" });
@@ -62,13 +74,18 @@ export function HorarioVista({ id, hipica, rol, sesiones, aviso, ahora }: Props)
     dias.set(clave, [...(dias.get(clave) ?? []), s]);
   }
 
-  const proxima = visibles.find((s) => s.mi_reserva && !s.cancelada && new Date(s.inicio) > ahora);
+  const proxima = visibles.find((s) => s.mias.length > 0 && !s.cancelada && new Date(s.inicio) > ahora);
 
   return (
     <div className="mt-4 space-y-8">
       <Cabecera
         titulo={hipica.nombre}
         detalle={`Puedes anular hasta ${hipica.horas_minimas_anulacion} horas antes de la clase.`}
+        accion={
+          <Link href={`/hipica/${id}/familia`} className={botonSecundario}>
+            {familia ? "Mi familia" : "Añadir a un hijo"}
+          </Link>
+        }
       />
 
       {aviso && Object.hasOwn(AVISOS, aviso) && <Aviso tipo="error">{AVISOS[aviso]}</Aviso>}
@@ -76,7 +93,9 @@ export function HorarioVista({ id, hipica, rol, sesiones, aviso, ahora }: Props)
       {proxima && (
         <div className="flex items-center gap-4 rounded-xl bg-cuadra px-5 py-4 text-white">
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-white/75">Tu próxima clase</p>
+            <p className="text-sm text-white/75">
+              {familia ? `Próxima clase de ${unir(proxima.mias.map((m) => m.nombre))}` : "Tu próxima clase"}
+            </p>
             <p className="truncate text-lg font-semibold">
               {proxima.titulo}, {nombreDia(new Date(proxima.inicio)).titulo.toLowerCase()} a las{" "}
               {fHora.format(new Date(proxima.inicio))}
@@ -120,7 +139,7 @@ export function HorarioVista({ id, hipica, rol, sesiones, aviso, ahora }: Props)
                   <li
                     key={s.id}
                     className={`flex flex-wrap items-start gap-x-4 gap-y-3 border-t border-linea px-4 py-4 first:border-t-0 ${
-                      s.mi_reserva && !apagada ? "bg-alfalfa-suave" : ""
+                      s.mias.length > 0 && !apagada ? "bg-alfalfa-suave" : ""
                     }`}
                   >
                     <Hora inicio={fHora.format(new Date(s.inicio))} fin={fHora.format(new Date(s.fin))} apagada={apagada} />
@@ -143,29 +162,46 @@ export function HorarioVista({ id, hipica, rol, sesiones, aviso, ahora }: Props)
                           En curso o terminada, {s.ocupadas} {s.ocupadas === 1 ? "alumno" : "alumnos"}
                         </p>
                       ) : (
-                        <Plazas plazas={s.plazas} ocupadas={s.ocupadas} mia={Boolean(s.mi_reserva)} />
+                        <Plazas
+                          plazas={s.plazas}
+                          ocupadas={s.ocupadas}
+                          mias={s.mias.length}
+                          etiquetaMia={familia ? `Plaza para ${unir(s.mias.map((m) => m.nombre))}` : "Tienes plaza"}
+                        />
                       )}
                     </div>
 
-                    <div className="flex w-full gap-2 sm:w-auto sm:flex-col sm:items-stretch">
-                      {!apagada && s.mi_reserva && (
-                        <form action={anular} className="flex-1">
-                          <input type="hidden" name="hipica_id" value={id} />
-                          <input type="hidden" name="reserva_id" value={s.mi_reserva} />
-                          <button type="submit" className={`${botonSecundario} w-full`}>
-                            Anular
-                          </button>
-                        </form>
-                      )}
-                      {!apagada && !s.mi_reserva && libres > 0 && (
-                        <form action={reservar} className="flex-1">
-                          <input type="hidden" name="hipica_id" value={id} />
-                          <input type="hidden" name="sesion_id" value={s.id} />
-                          <button type="submit" className={`${boton} w-full`}>
-                            Reservar
-                          </button>
-                        </form>
-                      )}
+                    <div className={`flex w-full gap-2 ${familia ? "flex-col sm:w-60" : "sm:w-auto sm:flex-col sm:items-stretch"}`}>
+                      {!apagada &&
+                        jinetes.map((j) => {
+                          const suya = s.mias.find((m) => m.miembro === j.id);
+                          const nombre = j.yo ? "mí" : j.nombre;
+                          if (suya) {
+                            return (
+                              <form key={j.id} action={anular} className="flex-1">
+                                <input type="hidden" name="hipica_id" value={id} />
+                                <input type="hidden" name="reserva_id" value={suya.reserva} />
+                                <button type="submit" className={`${botonSecundario} w-full ${familia ? "text-tinta-suave" : ""}`}>
+                                  {familia ? (j.yo ? "Anular la mía" : `Anular la de ${j.nombre}`) : "Anular"}
+                                </button>
+                              </form>
+                            );
+                          }
+                          if (libres === 0) return null;
+                          return (
+                            <form key={j.id} action={reservar} className="flex-1">
+                              <input type="hidden" name="hipica_id" value={id} />
+                              <input type="hidden" name="sesion_id" value={s.id} />
+                              <input type="hidden" name="miembro_id" value={j.id} />
+                              <button
+                                type="submit"
+                                className={`${familia ? botonFamilia : boton} w-full`}
+                              >
+                                {familia ? `Reservar para ${nombre}` : "Reservar"}
+                              </button>
+                            </form>
+                          );
+                        })}
                       {esStaff && (
                         <Link href={`/hipica/${id}/sesion/${s.id}`} className={`${botonSecundario} flex-1`}>
                           Lista de {s.ocupadas}

@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
 const cabecerasSeguridad = [
   // Nadie puede meter la app dentro de un iframe (evita "clickjacking").
   { key: "X-Frame-Options", value: "DENY" },
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://*.supabase.co https://accounts.google.com; object-src 'none'" },
   // El navegador no adivina tipos de archivo.
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Al salir a otra web no se envía la URL completa (que puede llevar tokens).

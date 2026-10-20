@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { Pantalla, botonSecundario } from "@/components/app/ui";
-import { cerrarSesion } from "./actions";
 
 const ROLES = { admin: "Administrador", monitor: "Monitor", alumno: "Alumno" } as const;
 
@@ -17,11 +16,9 @@ export default function InicioPage() {
     <Pantalla>
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight [font-stretch:85%] sm:text-4xl">Tus hípicas</h1>
-        <form action={cerrarSesion}>
-          <button type="submit" className="min-h-11 rounded-lg px-3 text-sm font-medium text-tinta-suave hover:text-tinta">
-            Cerrar sesión
-          </button>
-        </form>
+        <Link href="/cuenta" className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-tinta-suave hover:text-tinta">
+          Mi cuenta
+        </Link>
       </div>
 
       <Suspense fallback={<p className="mt-8 text-tinta-suave">Cargando…</p>}>
@@ -68,12 +65,15 @@ async function ListaHipicas() {
                 </span>
               </Link>
               {m.rol === "admin" && (
-                <div className="flex gap-2 border-t border-linea bg-limo/50 px-5 py-3">
+                <div className="flex flex-wrap gap-2 border-t border-linea bg-limo/50 px-5 py-3">
                   <Link href={`/hipica/${m.hipicas.id}/clases`} className={`${botonSecundario} flex-1 sm:flex-none`}>
                     Clases
                   </Link>
                   <Link href={`/hipica/${m.hipicas.id}/miembros`} className={`${botonSecundario} flex-1 sm:flex-none`}>
                     Miembros
+                  </Link>
+                  <Link href={`/hipica/${m.hipicas.id}/ajustes`} className={`${botonSecundario} flex-1 sm:flex-none`}>
+                    Ajustes
                   </Link>
                 </div>
               )}

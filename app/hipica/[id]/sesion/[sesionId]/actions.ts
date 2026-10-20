@@ -52,3 +52,15 @@ export async function cambiarCancelacion(formData: FormData) {
   if (error) console.error("cancelar sesión:", error.message);
   redirect(`/hipica/${hipicaId}/sesion/${sesionId}`);
 }
+
+// Solo admin: apunta a un alumno (con o sin cuenta, o un jinete a cargo de otro).
+export async function apuntarAlumno(formData: FormData) {
+  const [hipicaId, sesionId, miembroId] = ids(formData, "hipica_id", "sesion_id", "miembro_id");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reservar", { p_sesion: sesionId, p_miembro: miembroId });
+  if (error) {
+    console.error("apuntar alumno:", error.message);
+    redirect(`/hipica/${hipicaId}/sesion/${sesionId}?error=apuntar`);
+  }
+  refresh();
+}

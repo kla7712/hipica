@@ -48,6 +48,17 @@ export async function crearClase(formData: FormData) {
     console.error("crear clase:", error.message);
     volver(hipicaId, "error=crear");
   }
+
+  // Si el calendario es automático, publica ya las sesiones de la clase nueva.
+  const { data: h } = await supabase
+    .from("hipicas")
+    .select("calendario_auto, semanas_auto")
+    .eq("id", hipicaId)
+    .maybeSingle<{ calendario_auto: boolean; semanas_auto: number }>();
+  if (h?.calendario_auto) {
+    const hasta = new Date(Date.now() + h.semanas_auto * 7 * 864e5).toISOString().slice(0, 10);
+    await supabase.rpc("generar_sesiones", { p_hipica: hipicaId, p_hasta: hasta });
+  }
   volver(hipicaId, "ok=creada");
 }
 

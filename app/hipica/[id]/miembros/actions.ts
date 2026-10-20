@@ -57,3 +57,26 @@ export async function darDeBaja(formData: FormData) {
   }
   refresh();
 }
+
+// Solo admin: alumno sin cuenta (reserva por teléfono, no usa el móvil…).
+export async function anadirSinCuenta(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const telefono = String(formData.get("telefono") ?? "").trim();
+  if (!UUID.test(hipicaId)) redirect("/");
+  if (nombre.length < 1 || nombre.length > 120 || telefono.length > 30) {
+    redirect(`/hipica/${hipicaId}/miembros?error=sincuenta`);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("anadir_alumno_sin_cuenta", {
+    p_hipica: hipicaId,
+    p_nombre: nombre,
+    p_telefono: telefono,
+  });
+  if (error) {
+    console.error("anadir_alumno_sin_cuenta:", error.message);
+    redirect(`/hipica/${hipicaId}/miembros?error=sincuenta`);
+  }
+  refresh();
+}

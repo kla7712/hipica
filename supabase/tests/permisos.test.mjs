@@ -182,10 +182,11 @@ if (migrations.length > 1) {
   check('el alumno ve el horario de su hípica', hA1.length >= 2, `(${hA1.length})`);
   const fila = hA1.find(r => r.id === s1);
   check('ve plazas ocupadas aunque no vea reservas ajenas', fila && fila.ocupadas === 1, JSON.stringify(fila));
-  check('su reserva no aparece en una sesión ajena', fila && fila.mi_reserva === null);
+  const mia = r => (r.mi_reserva !== undefined ? r.mi_reserva : (r.mias[0]?.reserva ?? null));
+  check('su reserva no aparece en una sesión ajena', fila && mia(fila) === null);
   const hA2 = (await as(U.alumno2, `select * from public.horario($1, $2, $3)`, [h1, desde, hasta])).rows;
   const fila2 = hA2.find(r => r.id === s1);
-  check('alumno 2 ve su propia reserva', fila2 && fila2.mi_reserva === r2);
+  check('alumno 2 ve su propia reserva', fila2 && mia(fila2) === r2);
   const hB = (await as(U.adminB, `select * from public.horario($1, $2, $3)`, [h1, desde, hasta])).rows;
   check('admin B no ve el horario de la hípica A', hB.length === 0);
   const largo = (await as(U.alumno1, `select * from public.horario($1, $2, $3)`,
@@ -221,6 +222,86 @@ if (migrations.length > 2) {
   const intentos = [];
   for (let i = 0; i < 5; i++) intentos.push(await as(U.otro, `select public.crear_hipica($1, 'X')`, [`H${i}`]).then(() => 1, () => 0));
   check('máximo 3 hípicas por cuenta', intentos.reduce((a, b) => a + b, 0) === 3, JSON.stringify(intentos));
+}
+
+if (migrations.length > 3) {
+  console.log('Familias, alumnos sin cuenta, ajustes y borrar cuenta (0004)');
+  // Hípica nueva y limpia para este bloque.
+  const P = { admin: '00000000-0000-0000-0000-0000000000f1', padre: '00000000-0000-0000-0000-0000000000f2',
+              vecino: '00000000-0000-0000-0000-0000000000f3', solo: '00000000-0000-0000-0000-0000000000f4' };
+  for (const id of Object.values(P)) await db.query('insert into auth.users values ($1)', [id]);
+  const hF = one(await as(P.admin, `select public.crear_hipica('Hípica Familia', 'Fran')`));
+  const inv = one(await as(P.admin, `insert into public.invitaciones (hipica_id) values ($1) returning token`, [hF]));
+  await as(P.padre, `select public.aceptar_invitacion($1, 'Padre')`, [inv]);
+  await as(P.vecino, `select public.aceptar_invitacion($1, 'Vecino')`, [inv]);
+  const hijo1 = one(await as(P.padre, `select public.anadir_jinete($1, 'Lucía')`, [hF]));
+  const hijo2 = one(await as(P.padre, `select public.anadir_jinete($1, 'Pablo')`, [hF]));
+  check('el padre añade dos jinetes a su cargo', !!hijo1 && !!hijo2);
+  const veo = (await as(P.padre, `select nombre from public.miembros where hipica_id = $1 order by nombre`, [hF])).rows.map(r => r.nombre);
+  check('el padre ve su ficha y la de sus hijos', JSON.stringify(veo) === JSON.stringify(['Lucía', 'Pablo', 'Padre']), JSON.stringify(veo));
+  const veV = (await as(P.vecino, `select nombre from public.miembros where id = $1`, [hijo1])).rows.length;
+  check('otro alumno no ve a los hijos', veV === 0);
+
+  const sF = one(await as(P.admin, `insert into public.sesiones (hipica_id, titulo, inicio, fin, plazas)
+    values ($1, 'Ponis', now() + interval '3 days', now() + interval '3 days 1 hour', 3) returning id`, [hF]));
+  const rH1 = one(await as(P.padre, `select public.reservar($1, $2)`, [sF, hijo1]));
+  const rH2 = one(await as(P.padre, `select public.reservar($1, $2)`, [sF, hijo2]));
+  check('el padre reserva para cada hijo', !!rH1 && !!rH2);
+  await expectError('otro alumno no reserva en nombre de los hijos', P.vecino, `select public.reservar($1, $2)`, [sF, hijo1], /No puedes reservar/);
+  const fila = (await as(P.padre, `select * from public.horario($1, now(), now() + interval '7 days')`, [hF])).rows.find(r => r.id === sF);
+  check('el horario muestra las dos reservas de la familia', fila && fila.mias.length === 2 && fila.ocupadas === 2, JSON.stringify(fila?.mias));
+  const filaV = (await as(P.vecino, `select * from public.horario($1, now(), now() + interval '7 days')`, [hF])).rows.find(r => r.id === sF);
+  check('el vecino ve las plazas ocupadas pero no quién', filaV && filaV.ocupadas === 2 && filaV.mias.length === 0);
+  await expectError('el vecino no anula la reserva del hijo', P.vecino, `select public.anular_reserva($1)`, [rH1], /No puedes anular/);
+  await as(P.padre, `select public.anular_reserva($1)`, [rH2]);
+  check('el padre anula la reserva de un hijo', one(await db.query(`select estado::text from public.reservas where id = $1`, [rH2])) === 'anulada');
+  await expectError('el padre no puede cambiar el titular de un jinete', P.padre,
+    `update public.miembros set titular_id = null where id = $1`, [hijo1], /permission denied/i);
+  await expectError('el padre no puede convertir a un hijo en admin', P.padre,
+    `update public.miembros set rol = 'admin' where id = $1`, [hijo1], /administrador/);
+  const ren = await as(P.padre, `update public.miembros set nombre = 'Lucía G.' where id = $1`, [hijo1]);
+  check('el padre puede corregir el nombre de un hijo', ren.affectedRows === 1);
+  await expectError('el vecino no quita a los hijos de otro', P.vecino, `select public.quitar_jinete($1)`, [hijo1], /No puedes quitar/);
+  for (let i = 0; i < 4; i++) await as(P.padre, `select public.anadir_jinete($1, $2)`, [hF, `Extra ${i}`]);
+  await expectError('máximo 6 jinetes por cuenta', P.padre, `select public.anadir_jinete($1, 'Séptimo')`, [hF], /Máximo 6/);
+
+  // Alumno sin cuenta, gestionado por el admin
+  const sinCuenta = one(await as(P.admin, `select public.anadir_alumno_sin_cuenta($1, 'Manolo', '600000000')`, [hF]));
+  await expectError('un alumno no puede crear alumnos sin cuenta', P.padre, `select public.anadir_alumno_sin_cuenta($1, 'x', '')`, [hF], /administrador/);
+  const rS = one(await as(P.admin, `select public.reservar($1, $2)`, [sF, sinCuenta]));
+  check('el admin reserva para un alumno sin cuenta', !!rS);
+  const rH2b = one(await as(P.padre, `select public.reservar($1, $2)`, [sF, hijo2]));
+  check('un hijo vuelve a reservar tras anular (tercera plaza)', rH2b === rH2);
+  await expectError('la clase se llena (3 plazas)', P.admin, `select public.reservar($1)`, [sF], /No quedan plazas/);
+  await expectError('el padre no puede reservar para el alumno sin cuenta', P.padre, `select public.reservar($1, $2)`, [sF, sinCuenta], /No puedes reservar/);
+
+  // Al dar de baja al padre se van también sus hijos
+  const idPadre = one(await as(P.admin, `select id from public.miembros where user_id = $1`, [P.padre]));
+  await as(P.admin, `select public.dar_de_baja($1)`, [idPadre]);
+  const activos = (await db.query(`select count(*)::int as n from public.miembros where titular_id = $1 and activo`, [idPadre])).rows[0].n;
+  check('dar de baja al padre da de baja a sus hijos', activos === 0);
+  check('y anula sus reservas futuras', one(await db.query(`select estado::text from public.reservas where id = $1`, [rH1])) === 'anulada');
+
+  // Ajustes y calendario automático
+  const okAj = await as(P.admin, `update public.hipicas set horas_minimas_anulacion = 24, calendario_auto = true, semanas_auto = 2 where id = $1`, [hF]);
+  check('el admin cambia los ajustes', okAj.affectedRows === 1);
+  await expectError('semanas_auto fuera de rango', P.admin, `update public.hipicas set semanas_auto = 50 where id = $1`, [hF], /check/i);
+  await as(P.admin, `insert into public.clases (hipica_id, titulo, dia_semana, hora_inicio, plazas) values ($1, 'Auto', extract(isodow from current_date + 2), '10:00', 4)`, [hF]);
+  await expectError('la app no puede lanzar el calendario automático', P.admin, `select public.generar_calendario_automatico()`, [], /permission denied/i);
+  await db.exec(`select set_config('request.jwt.claim.sub', '', false)`);
+  const auto = one(await db.query(`select public.generar_calendario_automatico()`));
+  check('el calendario automático crea sesiones', auto >= 2, `(${auto})`);
+
+  // Borrar cuenta
+  await expectError('el único admin de una hípica con alumnos no puede borrarse', P.admin, `select public.borrar_mi_cuenta()`, [], /único administrador/);
+  await as(P.vecino, `select public.borrar_mi_cuenta()`);
+  const quedaV = (await db.query(`select count(*)::int as n from public.miembros where user_id = $1`, [P.vecino])).rows[0].n;
+  const quedaU = (await db.query(`select count(*)::int as n from auth.users where id = $1`, [P.vecino])).rows[0].n;
+  check('borrar cuenta elimina la cuenta y sus fichas', quedaV === 0 && quedaU === 0);
+  const hSolo = one(await as(P.solo, `select public.crear_hipica('Hípica de prueba', 'Solo')`));
+  await as(P.solo, `select public.borrar_mi_cuenta()`);
+  const quedaH = (await db.query(`select count(*)::int as n from public.hipicas where id = $1`, [hSolo])).rows[0].n;
+  check('si era su hípica y no había nadie más, se borra entera', quedaH === 0);
 }
 
 console.log(`\n${ok} correctas, ${fail} fallidas`);

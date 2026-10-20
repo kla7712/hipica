@@ -5,6 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Reservas de clases",
   description: "Horario y reservas de clases de tu hípica.",
+  appleWebApp: { capable: true, title: "Reservas", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

@@ -13,6 +13,7 @@ const CODIGOS: [string, string][] = [
   ["La clase ya ha empezado", "empezada"],
   ["Ya no se puede anular", "plazo"],
   ["No puedes anular esta reserva", "ajena"],
+  ["No puedes reservar para esta persona", "persona"],
 ];
 
 function volver(hipicaId: string, mensaje?: string): never {
@@ -23,10 +24,14 @@ function volver(hipicaId: string, mensaje?: string): never {
 export async function reservar(formData: FormData) {
   const hipicaId = String(formData.get("hipica_id") ?? "");
   const sesionId = String(formData.get("sesion_id") ?? "");
-  if (!UUID.test(hipicaId) || !UUID.test(sesionId)) redirect("/");
+  const miembroId = String(formData.get("miembro_id") ?? "");
+  if (!UUID.test(hipicaId) || !UUID.test(sesionId) || (miembroId && !UUID.test(miembroId))) redirect("/");
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("reservar", { p_sesion: sesionId });
+  const { error } = await supabase.rpc("reservar", {
+    p_sesion: sesionId,
+    ...(miembroId ? { p_miembro: miembroId } : {}),
+  });
   if (error) volver(hipicaId, error.message);
   volver(hipicaId);
 }

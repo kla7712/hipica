@@ -122,7 +122,20 @@ await ataque('alumno dado de baja vuelve a entrar con el enlace', U.alumno2,
   r => !r.rows[0]?.activo);
 await db.exec(`select set_config('request.jwt.claim.sub', '', false); update public.miembros set activo = true where id = '${idAlumno2}'`);
 
-console.log('\n6. Inyección SQL');
+console.log('\n6. Familias y cuentas (0004)');
+const tiene0004 = (await db.query(`select to_regprocedure('public.anadir_jinete(uuid,text)') is not null as si`)).rows[0].si;
+if (tiene0004) {
+  await ataque('alumno añade un jinete en una hípica ajena', U.alumno, `select public.anadir_jinete($1, 'x')`, [hB]);
+  await ataque('alumno se asigna como titular de otro alumno', U.alumno, `update public.miembros set titular_id = $1 where id = $2`, [idAlumno, idAlumno2]);
+  await ataque('alumno crea un "hijo" con rol admin', U.alumno, `insert into public.miembros (hipica_id, rol, nombre, titular_id) values ($1, 'admin', 'x', $2)`, [hA, idAlumno]);
+  await ataque('alumno reserva en nombre de otro alumno', U.alumno, `select public.reservar($1, $2)`, [sesion, idAlumno2]);
+  await ataque('alumno lanza el calendario automático', U.alumno, `select public.generar_calendario_automatico()`);
+  await ataque('alumno usa la baja interna', U.alumno, `select public._baja($1)`, [idAlumno2]);
+  await ataque('anónimo borra cuentas', null, `select public.borrar_mi_cuenta()`);
+  await ataque('alumno da de alta alumnos sin cuenta', U.alumno, `select public.anadir_alumno_sin_cuenta($1, 'x', '')`, [hA]);
+}
+
+console.log('\n7. Inyección SQL');
 {
   const nombre = `x'); drop table public.reservas; --`;
   await as(U.intruso, `select public.aceptar_invitacion($1, $2)`, [tokAlumno, nombre]).catch(() => {});

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { Pantalla, Volver } from "@/components/app/ui";
-import { DIAS_VISTA, HorarioVista, type Sesion } from "./vista";
+import { DIAS_VISTA, HorarioVista, type Jinete, type Sesion } from "./vista";
 
 export default function HorarioPage({ params, searchParams }: PageProps<"/hipica/[id]">) {
   return (
@@ -25,10 +25,12 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
   const supabase = await createClient();
   const { data: yo } = await supabase
     .from("miembros")
-    .select("rol, hipicas(nombre, zona_horaria, horas_minimas_anulacion)")
+    .select("id, rol, hipicas(nombre, zona_horaria, horas_minimas_anulacion)")
     .eq("hipica_id", id)
     .eq("user_id", userId)
+    .eq("activo", true)
     .maybeSingle<{
+      id: string;
       rol: string;
       hipicas: { nombre: string; zona_horaria: string; horas_minimas_anulacion: number } | null;
     }>();
@@ -46,12 +48,27 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
   if (error) throw new Error(error.message);
   const sesiones = (data ?? []) as Sesion[];
 
+  // Yo y los jinetes a mi cargo.
+  const { data: familia } = await supabase
+    .from("miembros")
+    .select("id, nombre, user_id")
+    .eq("hipica_id", id)
+    .eq("activo", true)
+    .or(`id.eq.${yo.id},titular_id.eq.${yo.id}`)
+    .order("nombre")
+    .returns<{ id: string; nombre: string; user_id: string | null }[]>();
+  const jinetes: Jinete[] = (familia ?? [])
+    .map((m) => ({ id: m.id, nombre: m.nombre, yo: m.user_id === userId }))
+    // Los hijos primero; el titular al final (muchos padres no montan).
+    .sort((a, b) => Number(a.yo) - Number(b.yo));
+
   return (
     <HorarioVista
       id={id}
       hipica={yo.hipicas}
       rol={yo.rol}
       sesiones={sesiones}
+      jinetes={jinetes}
       aviso={typeof aviso === "string" ? aviso : undefined}
       ahora={ahora}
     />

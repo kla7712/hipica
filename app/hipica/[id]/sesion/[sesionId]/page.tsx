@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { Pantalla, Volver } from "@/components/app/ui";
-import { cambiarCancelacion, marcarAsistencia, quitarAlumno } from "./actions";
+import { apuntarAlumno, cambiarCancelacion, marcarAsistencia, quitarAlumno } from "./actions";
 
 type Sesion = {
   id: string;
@@ -17,8 +17,10 @@ type Sesion = {
 type Reserva = {
   id: string;
   asistio: boolean | null;
-  alumno: { nombre: string; telefono: string | null } | null;
+  alumno: { id: string; nombre: string; telefono: string | null; titular_id: string | null } | null;
 };
+
+type Persona = { id: string; nombre: string; telefono: string | null; titular_id: string | null; rol: string };
 
 const botonBase = "inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-semibold";
 
@@ -70,7 +72,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
       .maybeSingle<Sesion>(),
     supabase
       .from("reservas")
-      .select("id, asistio, alumno:miembros(nombre, telefono)")
+      .select("id, asistio, alumno:miembros(id, nombre, telefono, titular_id)")
       .eq("sesion_id", sesionId)
       .eq("estado", "confirmada")
       .order("created_at")
@@ -82,6 +84,19 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
   const tz = yo.hipicas?.zona_horaria ?? "Europe/Madrid";
   const fDia = new Intl.DateTimeFormat("es-ES", { timeZone: tz, weekday: "long", day: "numeric", month: "long" });
   const fHora = new Intl.DateTimeFormat("es-ES", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+
+  // Todos los miembros activos: para saber quién es el titular de cada jinete
+  // y, si eres admin, para apuntar a alguien a la clase.
+  const { data: personas } = await supabase
+    .from("miembros")
+    .select("id, nombre, telefono, titular_id, rol")
+    .eq("hipica_id", id)
+    .eq("activo", true)
+    .order("nombre")
+    .returns<Persona[]>();
+  const porId = new Map((personas ?? []).map((p) => [p.id, p]));
+  const apuntados = new Set((reservas ?? []).map((r) => r.alumno?.id));
+  const disponibles = (personas ?? []).filter((p) => p.rol === "alumno" && !apuntados.has(p.id));
 
   const lista = (reservas ?? []).sort((a, b) =>
     (a.alumno?.nombre ?? "").localeCompare(b.alumno?.nombre ?? "", "es"),
@@ -131,11 +146,20 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
               <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4">
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{r.alumno?.nombre ?? "Alumno"}</p>
-                  {r.alumno?.telefono && (
-                    <a href={`tel:${r.alumno.telefono}`} className="text-sm text-tinta-suave underline">
-                      {r.alumno.telefono}
-                    </a>
-                  )}
+                  {(() => {
+                    const titular = r.alumno?.titular_id ? porId.get(r.alumno.titular_id) : null;
+                    const telefono = r.alumno?.telefono ?? titular?.telefono;
+                    return (
+                      <p className="text-sm text-tinta-suave">
+                        {titular && <>A cargo de {titular.nombre}{telefono ? ", " : ""}</>}
+                        {telefono && (
+                          <a href={`tel:${telefono}`} className="underline">
+                            {telefono}
+                          </a>
+                        )}
+                      </p>
+                    );
+                  })()}
                 </div>
 
                 <form action={marcarAsistencia} className="flex gap-2" aria-label={`Asistencia de ${r.alumno?.nombre ?? "alumno"}`}>
@@ -181,6 +205,47 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
           </ul>
         )}
       </section>
+
+      {/* Apuntar a un alumno (solo admin, antes de que empiece y con plazas) */}
+      {esAdmin && !empezada && !sesion.cancelada && lista.length < sesion.plazas && disponibles.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-semibold">Apuntar a un alumno</h2>
+          <form action={apuntarAlumno} className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="hipica_id" value={id} />
+            <input type="hidden" name="sesion_id" value={sesionId} />
+            <div className="min-w-0 flex-1 basis-60 space-y-1">
+              <label htmlFor="miembro_id" className="text-sm font-semibold">
+                Alumno
+              </label>
+              <select
+                id="miembro_id"
+                name="miembro_id"
+                required
+                className="w-full rounded-lg border border-linea bg-white px-3 py-2.5 text-base text-tinta outline-none focus:border-cuadra"
+              >
+                {disponibles.map((p) => {
+                  const titular = p.titular_id ? porId.get(p.titular_id) : null;
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                      {titular ? ` (de ${titular.nombre})` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <button
+              type="submit"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cuadra px-4 font-semibold text-white hover:bg-cuadra-hover"
+            >
+              Apuntar
+            </button>
+          </form>
+          {errorQuery === "apuntar" && (
+            <p className="text-sm text-alerta">No se ha podido apuntar. Puede que la clase se haya llenado.</p>
+          )}
+        </section>
+      )}
 
       {/* Cancelar clase (solo admin y antes de que empiece) */}
       {esAdmin && !empezada && (
