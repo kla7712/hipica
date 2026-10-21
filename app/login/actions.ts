@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { rutaSegura } from "@/lib/rutas";
+import { CUENTAS_DEMO, demoActiva } from "@/lib/demo";
 
 const EMAIL = /^[^\s@<>]{1,64}@[^\s@<>]{1,190}$/;
 
@@ -66,4 +67,21 @@ export async function entrarConGoogle(formData: FormData) {
     volver({ error: "google" }, next);
   }
   redirect(data.url);
+}
+
+// Entrar en la demo: cuentas de ejemplo con contraseña guardada en el servidor.
+export async function entrarDemo(formData: FormData) {
+  const rol = formData.get("rol") === "familia" ? "familia" : "admin";
+  if (!demoActiva()) redirect("/login");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: CUENTAS_DEMO[rol],
+    password: process.env.DEMO_PASSWORD!,
+  });
+  if (error) {
+    console.error("entrar demo:", error.message);
+    redirect("/login?error=demo");
+  }
+  redirect("/");
 }

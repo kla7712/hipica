@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
-import { Pantalla, botonSecundario } from "@/components/app/ui";
+import { Aviso, Pantalla, botonSecundario } from "@/components/app/ui";
+import { esCuentaDemo } from "@/lib/demo";
 
 const ROLES = { admin: "Administrador", monitor: "Monitor", alumno: "Alumno" } as const;
 
@@ -33,6 +34,8 @@ async function ListaHipicas() {
   if (!userId) redirect("/login");
 
   const supabase = await createClient();
+  const { data: sesion } = await supabase.auth.getClaims();
+  const demo = esCuentaDemo(sesion?.claims?.email);
   const { data, error } = await supabase
     .from("miembros")
     .select("rol, hipicas(id, nombre)")
@@ -44,6 +47,15 @@ async function ListaHipicas() {
   if (!data.length) redirect("/nueva-hipica");
 
   return (
+    <>
+    {demo && (
+      <div className="mt-6">
+        <Aviso tipo="info">
+          Estás en la demo. Prueba lo que quieras: reservar, crear clases, invitar… Todo vuelve a su estado original
+          cada noche.
+        </Aviso>
+      </div>
+    )}
     <ul className="mt-8 space-y-4">
       {data.map(
         (m) =>
@@ -81,5 +93,6 @@ async function ListaHipicas() {
           ),
       )}
     </ul>
+    </>
   );
 }

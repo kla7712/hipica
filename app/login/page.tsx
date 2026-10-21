@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { rutaSegura } from "@/lib/rutas";
 import { Aviso, Pantalla, boton, campo, etiqueta } from "@/components/app/ui";
-import { entrarConGoogle, enviarEnlace, verificarCodigo } from "./actions";
+import { demoActiva } from "@/lib/demo";
+import { entrarConGoogle, entrarDemo, enviarEnlace, verificarCodigo } from "./actions";
 
 const ERRORES: Record<string, string> = {
   email: "Escribe un email válido.",
@@ -11,9 +12,13 @@ const ERRORES: Record<string, string> = {
   enlace: "El enlace no es válido o ha caducado. Pide un código nuevo.",
   codigo: "El código no es correcto o ha caducado. Revísalo o pide uno nuevo.",
   google: "No se ha podido entrar con Google. Prueba otra vez o usa tu email.",
+  demo: "La demo no está disponible ahora mismo.",
 };
 
 const EMAIL = /^[^\s@<>]{1,64}@[^\s@<>]{1,190}$/;
+
+// El botón de Google solo aparece cuando está configurado (LOGIN_GOOGLE=si en el servidor).
+const googleActivo = () => process.env.LOGIN_GOOGLE === "si";
 
 // La parte fija se sirve al instante; lo que depende de la URL va dentro de <Suspense>.
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -22,7 +27,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       <div className="space-y-8 pt-8 sm:pt-16">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Entra en tu hípica</h1>
-          <p className="text-tinta-suave">Con tu cuenta de Google o con un código que te enviamos al email. Sin contraseñas.</p>
+          <p className="text-tinta-suave">Te enviamos un código al email para entrar. Sin contraseñas.</p>
         </div>
         <Suspense>
           <Formulario searchParams={searchParams} />
@@ -87,18 +92,22 @@ async function Formulario({ searchParams }: Pick<PageProps<"/login">, "searchPar
   return (
     <div className="space-y-6">
       {aviso === "borrada" && <Aviso tipo="ok">Tu cuenta y todos tus datos se han borrado.</Aviso>}
-      <form action={entrarConGoogle}>
-        <input type="hidden" name="next" value={destino} />
-        <button
-          type="submit"
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-linea bg-white px-4 font-semibold text-tinta transition-colors hover:border-tinta-suave"
-        >
-          Continuar con Google
-        </button>
-      </form>
-      <div className="flex items-center gap-3 text-sm text-tinta-suave" aria-hidden="true">
-        <span className="h-px flex-1 bg-linea" />o con tu email<span className="h-px flex-1 bg-linea" />
-      </div>
+      {googleActivo() && (
+        <>
+          <form action={entrarConGoogle}>
+            <input type="hidden" name="next" value={destino} />
+            <button
+              type="submit"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-linea bg-white px-4 font-semibold text-tinta transition-colors hover:border-tinta-suave"
+            >
+              Continuar con Google
+            </button>
+          </form>
+          <div className="flex items-center gap-3 text-sm text-tinta-suave" aria-hidden="true">
+            <span className="h-px flex-1 bg-linea" />o con tu email<span className="h-px flex-1 bg-linea" />
+          </div>
+        </>
+      )}
       <form action={enviarEnlace} className="space-y-4">
         <input type="hidden" name="next" value={destino} />
         <div className="space-y-2">
@@ -121,6 +130,35 @@ async function Formulario({ searchParams }: Pick<PageProps<"/login">, "searchPar
           Enviarme el código
         </button>
       </form>
+
+      {demoActiva() && (
+        <section className="space-y-3 rounded-xl border border-linea bg-white p-5">
+          <div>
+            <h2 className="font-semibold">¿Solo quieres verla?</h2>
+            <p className="text-sm text-tinta-suave">
+              Entra en una hípica de ejemplo sin registrarte. Puedes tocar lo que quieras: todo vuelve a su estado
+              original cada noche.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <form action={entrarDemo}>
+              <input type="hidden" name="rol" value="admin" />
+              <button type="submit" className={`${boton} w-full`}>
+                Probar como la hípica
+              </button>
+            </form>
+            <form action={entrarDemo}>
+              <input type="hidden" name="rol" value="familia" />
+              <button
+                type="submit"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-cuadra/60 bg-white px-4 py-2.5 font-semibold text-cuadra hover:bg-alfalfa-suave"
+              >
+                Probar como familia
+              </button>
+            </form>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
