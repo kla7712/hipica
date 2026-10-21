@@ -1,8 +1,35 @@
 import { Suspense } from "react";
-import { notFound, redirect } from "next/navigation";
-import { createClient, getUserId } from "@/lib/supabase/server";
-import { Pantalla, Volver } from "@/components/app/ui";
-import { apuntarAlumno, cambiarCancelacion, marcarAsistencia, quitarAlumno } from "./actions";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import {
+  Aviso,
+  Cabecera,
+  CargandoApp,
+  Chip,
+  Cifras,
+  PantallaApp,
+  Seccion,
+  Vacio,
+  boton,
+  botonPeligro,
+  botonSecundario,
+  botonTexto,
+  campo,
+  etiqueta,
+  tarjeta,
+} from "@/components/app/ui";
+import { SelectAuto } from "@/components/app/select-auto";
+import { capitalizar, cargarContexto, fechas, navegacion } from "@/lib/hipica";
+import { resumenBono, type EstadoBono } from "@/lib/tipos";
+import {
+  apuntarAlumno,
+  apuntarEspera,
+  asignarCaballo,
+  cambiarCancelacion,
+  marcarAsistencia,
+  quitarAlumno,
+  quitarEspera,
+} from "./actions";
 
 type Sesion = {
   id: string;
@@ -11,285 +38,382 @@ type Sesion = {
   fin: string;
   plazas: number;
   cancelada: boolean;
+  tipo: "grupo" | "particular" | "libre";
   monitor: { nombre: string } | null;
+  pista: { nombre: string } | null;
 };
+type Persona = { id: string; nombre: string; telefono: string | null; titular_id: string | null; rol: string; nivel: string | null };
+type Reserva = { id: string; asistio: boolean | null; caballo_id: string | null; desde_espera: boolean; miembro_id: string };
+type Espera = { id: string; miembro_id: string };
+type Caballo = { id: string; nombre: string; disponible: boolean; max_clases_dia: number };
+type Uso = { caballo_id: string; sesion_id: string; sesiones: { inicio: string } };
 
-type Reserva = {
-  id: string;
-  asistio: boolean | null;
-  alumno: { id: string; nombre: string; telefono: string | null; titular_id: string | null } | null;
+const ERRORES: Record<string, string> = {
+  apuntar: "No se ha podido apuntar. Puede que la clase se haya llenado.",
+  espera: "No se ha podido apuntar a la lista de espera.",
+  confirmar: "Marca la casilla para confirmar.",
+  caballo: "No se ha podido asignar el caballo.",
+  caballo_repetido: "Ese caballo ya está en esta clase. Elige otro.",
 };
-
-type Persona = { id: string; nombre: string; telefono: string | null; titular_id: string | null; rol: string };
-
-const botonBase = "inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-semibold";
 
 export default function SesionPage({ params, searchParams }: PageProps<"/hipica/[id]/sesion/[sesionId]">) {
   return (
-    <Pantalla>
-      <Suspense fallback={<p className="text-sm text-tinta-suave">Cargando…</p>}>
-        <Contenido params={params} searchParams={searchParams} />
-      </Suspense>
-    </Pantalla>
+    <Suspense fallback={<CargandoApp />}>
+      <Contenido params={params} searchParams={searchParams} />
+    </Suspense>
   );
 }
 
 async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesion/[sesionId]">) {
   const { id, sesionId } = await params;
-  const { error: errorQuery } = await searchParams;
+  const { error: codigoError } = await searchParams;
+  const ctx = await cargarContexto(id);
+  const { supabase, hipica, esAdmin } = ctx;
+  const base = `/hipica/${id}`;
+  const f = fechas(hipica.zona_horaria);
 
-  const userId = await getUserId();
-  if (!userId) redirect("/login");
-
-  const supabase = await createClient();
-  const { data: yo } = await supabase
-    .from("miembros")
-    .select("rol, hipicas(zona_horaria)")
-    .eq("hipica_id", id)
-    .eq("user_id", userId)
-    .maybeSingle<{ rol: string; hipicas: { zona_horaria: string } | null }>();
-  if (!yo) notFound();
-
-  const volver = (
-    <Volver href={`/hipica/${id}`}>Horario</Volver>
-  );
-  if (yo.rol === "alumno") {
+  if (!ctx.esStaff) {
     return (
-      <>
-        {volver}
-        <p className="mt-8 text-tinta-suave">Solo el administrador y los monitores pueden ver la lista de asistentes.</p>
-      </>
+      <PantallaApp
+        nav={navegacion(id, ctx.yo.rol, "horario")}
+        cabecera={<Cabecera titulo="Lista de la clase" volver={{ href: `${base}/horario`, texto: "Reservar" }} />}
+      >
+        <Vacio>Solo la hípica puede ver la lista de alumnos de una clase.</Vacio>
+      </PantallaApp>
     );
   }
-  const esAdmin = yo.rol === "admin";
 
-  const [{ data: sesion }, { data: reservas, error }] = await Promise.all([
-    supabase
-      .from("sesiones")
-      .select("id, titulo, inicio, fin, plazas, cancelada, monitor:miembros(nombre)")
-      .eq("id", sesionId)
-      .eq("hipica_id", id)
-      .maybeSingle<Sesion>(),
-    supabase
-      .from("reservas")
-      .select("id, asistio, alumno:miembros(id, nombre, telefono, titular_id)")
-      .eq("sesion_id", sesionId)
-      .eq("estado", "confirmada")
-      .order("created_at")
-      .returns<Reserva[]>(),
-  ]);
+  const { data: sesion } = await supabase
+    .from("sesiones")
+    .select("id, titulo, inicio, fin, plazas, cancelada, tipo, monitor:miembros(nombre), pista:pistas(nombre)")
+    .eq("id", sesionId)
+    .eq("hipica_id", id)
+    .maybeSingle<Sesion>();
   if (!sesion) notFound();
+
+  const inicio = new Date(sesion.inicio);
+  const [{ data: reservas, error }, { data: esperas }, { data: personas }, { data: caballos }, { data: usos }, { data: bonos }] =
+    await Promise.all([
+      supabase
+        .from("reservas")
+        .select("id, asistio, caballo_id, desde_espera, miembro_id")
+        .eq("sesion_id", sesionId)
+        .eq("estado", "confirmada")
+        .order("created_at")
+        .returns<Reserva[]>(),
+      supabase.from("esperas").select("id, miembro_id").eq("sesion_id", sesionId).order("created_at").returns<Espera[]>(),
+      supabase
+        .from("miembros")
+        .select("id, nombre, telefono, titular_id, rol, nivel")
+        .eq("hipica_id", id)
+        .eq("activo", true)
+        .order("nombre")
+        .returns<Persona[]>(),
+      supabase
+        .from("caballos")
+        .select("id, nombre, disponible, max_clases_dia")
+        .eq("hipica_id", id)
+        .eq("activo", true)
+        .order("nombre")
+        .returns<Caballo[]>(),
+      // Clases de cada caballo ese mismo día (para no cansarlo).
+      supabase
+        .from("reservas")
+        .select("caballo_id, sesion_id, sesiones!inner(inicio)")
+        .eq("hipica_id", id)
+        .eq("estado", "confirmada")
+        .not("caballo_id", "is", null)
+        .gte("sesiones.inicio", new Date(inicio.getTime() - 24 * 36e5).toISOString())
+        .lte("sesiones.inicio", new Date(inicio.getTime() + 24 * 36e5).toISOString())
+        .returns<Uso[]>(),
+      supabase.rpc("estado_bonos", { p_hipica: id }),
+    ]);
   if (error) throw new Error(error.message);
 
-  const tz = yo.hipicas?.zona_horaria ?? "Europe/Madrid";
-  const fDia = new Intl.DateTimeFormat("es-ES", { timeZone: tz, weekday: "long", day: "numeric", month: "long" });
-  const fHora = new Intl.DateTimeFormat("es-ES", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
-
-  // Todos los miembros activos: para saber quién es el titular de cada jinete
-  // y, si eres admin, para apuntar a alguien a la clase.
-  const { data: personas } = await supabase
-    .from("miembros")
-    .select("id, nombre, telefono, titular_id, rol")
-    .eq("hipica_id", id)
-    .eq("activo", true)
-    .order("nombre")
-    .returns<Persona[]>();
   const porId = new Map((personas ?? []).map((p) => [p.id, p]));
-  const apuntados = new Set((reservas ?? []).map((r) => r.alumno?.id));
-  const disponibles = (personas ?? []).filter((p) => p.rol === "alumno" && !apuntados.has(p.id));
-
+  const bonoDe = new Map(((bonos ?? []) as EstadoBono[]).map((b) => [b.miembro_id, b]));
+  const hoy = f.clave(new Date());
   const lista = (reservas ?? []).sort((a, b) =>
-    (a.alumno?.nombre ?? "").localeCompare(b.alumno?.nombre ?? "", "es"),
+    (porId.get(a.miembro_id)?.nombre ?? "").localeCompare(porId.get(b.miembro_id)?.nombre ?? "", "es"),
   );
+  const enEspera = esperas ?? [];
+  const ocupadas = lista.length;
+  const libres = Math.max(sesion.plazas - ocupadas, 0);
+  const ahora = new Date();
+  const empezada = inicio <= ahora;
   const vinieron = lista.filter((r) => r.asistio === true).length;
-  const sinMarcar = lista.filter((r) => r.asistio === null).length;
-  const empezada = new Date(sesion.inicio) <= new Date();
+  const conCaballos = sesion.tipo !== "libre";
+  const limpiar = typeof codigoError === "string" ? "1" : "";
+
+  // Clases que tiene cada caballo ese día, sin contar esta.
+  const dia = f.clave(inicio);
+  const otras = new Map<string, number>();
+  for (const u of usos ?? []) {
+    if (u.sesion_id === sesionId || f.clave(u.sesiones.inicio) !== dia) continue;
+    otras.set(u.caballo_id, (otras.get(u.caballo_id) ?? 0) + 1);
+  }
+
+  const ocultos = (extra: Record<string, string> = {}) => (
+    <>
+      <input type="hidden" name="hipica_id" value={id} />
+      <input type="hidden" name="sesion_id" value={sesionId} />
+      {limpiar && <input type="hidden" name="limpiar" value="1" />}
+      {Object.entries(extra).map(([k, v]) => (
+        <input key={k} type="hidden" name={k} value={v} />
+      ))}
+    </>
+  );
+
+  const apuntados = new Set([...lista.map((r) => r.miembro_id), ...enEspera.map((e) => e.miembro_id)]);
+  const disponibles = (personas ?? []).filter((p) => p.rol === "alumno" && !apuntados.has(p.id));
+  const mensaje = typeof codigoError === "string" && Object.hasOwn(ERRORES, codigoError) ? ERRORES[codigoError] : null;
+  const detalle = [
+    `${f.hora(sesion.inicio)}–${f.hora(sesion.fin)}`,
+    sesion.pista?.nombre,
+    sesion.monitor?.nombre,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <div className="space-y-8">
-      {volver}
-
-      <div className="space-y-1">
-        <h1 className={`text-3xl font-bold tracking-tight [font-stretch:85%] sm:text-4xl ${sesion.cancelada ? "text-tinta-suave/60 line-through" : ""}`}>
-          {sesion.titulo}
-        </h1>
-        <p className="text-tinta first-letter:uppercase">
-          {fDia.format(new Date(sesion.inicio))} · {fHora.format(new Date(sesion.inicio))}–
-          {fHora.format(new Date(sesion.fin))}
-        </p>
-        <p className="text-sm text-tinta-suave">
-          {sesion.cancelada ? "Clase cancelada · " : ""}
-          {lista.length} de {sesion.plazas} plazas ocupadas
-          {sesion.monitor && ` · ${sesion.monitor.nombre}`}
-        </p>
-      </div>
-
-      {/* Asistentes */}
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-semibold">Asistentes</h2>
-          {lista.length > 0 && (
-            <p className="text-sm text-tinta-suave">
-              {vinieron} {vinieron === 1 ? "ha venido" : "han venido"}
-              {sinMarcar > 0 && ` · ${sinMarcar} sin marcar`}
-            </p>
-          )}
+    <PantallaApp
+      nav={navegacion(id, ctx.yo.rol, "horario")}
+      cabecera={
+        <Cabecera
+          volver={{ href: `${base}/horario?dia=${dia}`, texto: "Clases" }}
+          antetitulo={capitalizar(f.largo(inicio))}
+          titulo={sesion.cancelada ? `${sesion.titulo} (cancelada)` : sesion.titulo}
+          detalle={detalle}
+        >
+          <Cifras
+            items={[
+              { valor: `${ocupadas}/${sesion.plazas}`, texto: "plazas" },
+              { valor: vinieron, texto: vinieron === 1 ? "ha venido" : "han venido" },
+              { valor: enEspera.length, texto: "en espera" },
+            ]}
+          />
+        </Cabecera>
+      }
+    >
+      {mensaje && (
+        <div className="mb-5">
+          <Aviso tipo="error">{mensaje}</Aviso>
         </div>
+      )}
 
+      <Seccion titulo={conCaballos ? "Alumnos y caballos" : "Jinetes"} id="alumnos">
         {lista.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-linea bg-white/60 px-6 py-10 text-center text-tinta-suave">
-            Nadie ha reservado todavía.
-          </p>
+          <Vacio>Nadie ha reservado todavía.</Vacio>
         ) : (
-          <ul className="divide-y divide-linea overflow-hidden rounded-xl border border-linea bg-white">
-            {lista.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{r.alumno?.nombre ?? "Alumno"}</p>
-                  {(() => {
-                    const titular = r.alumno?.titular_id ? porId.get(r.alumno.titular_id) : null;
-                    const telefono = r.alumno?.telefono ?? titular?.telefono;
-                    return (
+          <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
+            {lista.map((r) => {
+              const p = porId.get(r.miembro_id);
+              const titular = p?.titular_id ? porId.get(p.titular_id) : null;
+              const telefono = p?.telefono ?? titular?.telefono;
+              const bono = bonoDe.get(r.miembro_id);
+              const rb = bono ? resumenBono(bono, hoy) : null;
+              const enEsta = new Set(lista.filter((x) => x.id !== r.id && x.caballo_id).map((x) => x.caballo_id));
+              return (
+                <li key={r.id} className="space-y-3 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                    <div className="min-w-0">
+                      <Link href={`${base}/miembros/${r.miembro_id}`} className="font-bold hover:underline">
+                        {p?.nombre ?? "Alumno"}
+                      </Link>
                       <p className="text-sm text-tinta-suave">
-                        {titular && <>A cargo de {titular.nombre}{telefono ? ", " : ""}</>}
+                        {[p?.nivel, titular && `de ${titular.nombre}`].filter(Boolean).join(" · ")}
                         {telefono && (
-                          <a href={`tel:${telefono}`} className="underline">
-                            {telefono}
-                          </a>
+                          <>
+                            {(p?.nivel || titular) && " · "}
+                            <a href={`tel:${telefono}`} className="underline">
+                              {telefono}
+                            </a>
+                          </>
                         )}
                       </p>
-                    );
-                  })()}
-                </div>
+                      <div className="mt-1 flex flex-wrap gap-1.5 empty:hidden">
+                        {sesion.tipo === "grupo" && rb && (rb.renovar || !bono?.bono_id) && <Chip tono={rb.tono}>{rb.texto}</Chip>}
+                        {r.desde_espera && <Chip tono="info">Entró desde la espera</Chip>}
+                      </div>
+                    </div>
+                    <form action={marcarAsistencia} className="flex gap-2" aria-label={`Asistencia de ${p?.nombre ?? "alumno"}`}>
+                      {ocultos({ reserva_id: r.id })}
+                      <button
+                        type="submit"
+                        name="asistio"
+                        value={r.asistio === true ? "nada" : "si"}
+                        aria-pressed={r.asistio === true}
+                        className={`inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-bold ${
+                          r.asistio === true ? "border-cuadra bg-cuadra text-white" : "border-linea bg-white hover:border-tinta-suave"
+                        }`}
+                      >
+                        Vino
+                      </button>
+                      <button
+                        type="submit"
+                        name="asistio"
+                        value={r.asistio === false ? "nada" : "no"}
+                        aria-pressed={r.asistio === false}
+                        className={`inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-bold ${
+                          r.asistio === false ? "border-alerta bg-alerta text-white" : "border-linea bg-white hover:border-tinta-suave"
+                        }`}
+                      >
+                        No vino
+                      </button>
+                    </form>
+                  </div>
 
-                <form action={marcarAsistencia} className="flex gap-2" aria-label={`Asistencia de ${r.alumno?.nombre ?? "alumno"}`}>
-                  <input type="hidden" name="reserva_id" value={r.id} />
-                  <button
-                    type="submit"
-                    name="asistio"
-                    value={r.asistio === true ? "nada" : "si"}
-                    aria-pressed={r.asistio === true}
-                    className={`${botonBase} ${
-                      r.asistio === true
-                        ? "border-cuadra bg-cuadra text-white"
-                        : "border-linea bg-white hover:border-tinta-suave"
-                    }`}
-                  >
-                    Vino
-                  </button>
-                  <button
-                    type="submit"
-                    name="asistio"
-                    value={r.asistio === false ? "nada" : "no"}
-                    aria-pressed={r.asistio === false}
-                    className={`${botonBase} ${
-                      r.asistio === false
-                        ? "border-alerta bg-alerta text-white"
-                        : "border-linea bg-white hover:border-tinta-suave"
-                    }`}
-                  >
-                    No vino
-                  </button>
-                </form>
+                  {conCaballos && !sesion.cancelada && (
+                    <form action={asignarCaballo}>
+                      {ocultos({ reserva_id: r.id })}
+                      <SelectAuto
+                        id={`caballo-${r.id}`}
+                        name="caballo_id"
+                        label={`Caballo de ${p?.nombre ?? "este alumno"}`}
+                        defaultValue={r.caballo_id ?? ""}
+                        opciones={[
+                          { valor: "", texto: r.caballo_id ? "Quitar caballo" : "Sin caballo asignado" },
+                          ...(caballos ?? []).map((c) => {
+                            const n = otras.get(c.id) ?? 0;
+                            let texto = c.nombre;
+                            if (enEsta.has(c.id)) texto += " · ya en esta clase";
+                            else if (!c.disponible) texto += " · en reposo";
+                            else if (n >= c.max_clases_dia) texto += ` · ya tiene ${n} clases (máx. ${c.max_clases_dia})`;
+                            else if (n > 0) texto += ` · ${n === 1 ? "1 clase más" : `${n} clases más`} ese día`;
+                            return {
+                              valor: c.id,
+                              texto,
+                              deshabilitada: c.id !== r.caballo_id && (enEsta.has(c.id) || !c.disponible),
+                            };
+                          }),
+                        ]}
+                      />
+                    </form>
+                  )}
 
-                {esAdmin && !empezada && (
-                  <form action={quitarAlumno}>
-                    <input type="hidden" name="reserva_id" value={r.id} />
-                    <button type="submit" className="rounded-lg px-3 py-2 text-sm text-tinta-suave underline hover:text-tinta">
-                      Quitar
-                    </button>
-                  </form>
-                )}
-              </li>
-            ))}
+                  {esAdmin && !empezada && (
+                    <form action={quitarAlumno} className="-my-2 text-right">
+                      {ocultos({ reserva_id: r.id })}
+                      <button type="submit" className={botonTexto}>
+                        Quitar de la clase
+                      </button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
-      </section>
+        {conCaballos && (caballos ?? []).length === 0 && lista.length > 0 && (
+          <p className="mt-3 text-sm text-tinta-suave">
+            Da de alta los caballos de la escuela en la pestaña Caballos para poder asignarlos.
+          </p>
+        )}
+      </Seccion>
 
-      {/* Apuntar a un alumno (solo admin, antes de que empiece y con plazas) */}
-      {esAdmin && !empezada && !sesion.cancelada && lista.length < sesion.plazas && disponibles.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-semibold">Apuntar a un alumno</h2>
-          <form action={apuntarAlumno} className="flex flex-wrap items-end gap-3">
-            <input type="hidden" name="hipica_id" value={id} />
-            <input type="hidden" name="sesion_id" value={sesionId} />
-            <div className="min-w-0 flex-1 basis-60 space-y-1">
-              <label htmlFor="miembro_id" className="text-sm font-semibold">
+      {(enEspera.length > 0 || (libres === 0 && !empezada && !sesion.cancelada)) && (
+        <Seccion titulo="Lista de espera" id="espera">
+          {enEspera.length === 0 ? (
+            <Vacio>Nadie espera plaza. Si alguien anula, entrará el primero de la lista.</Vacio>
+          ) : (
+            <ol className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
+              {enEspera.map((e, i) => {
+                const p = porId.get(e.miembro_id);
+                return (
+                  <li key={e.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-info-suave text-sm font-extrabold text-info">
+                      {i + 1}
+                    </span>
+                    <span className="min-w-0 flex-1 font-bold">{p?.nombre ?? "Alumno"}</span>
+                    {esAdmin && libres > 0 && !empezada && (
+                      <form action={apuntarAlumno}>
+                        {ocultos({ miembro_id: e.miembro_id })}
+                        <button type="submit" className={`${botonSecundario} px-3 text-sm`}>
+                          Pasar a la clase
+                        </button>
+                      </form>
+                    )}
+                    {esAdmin && (
+                      <form action={quitarEspera}>
+                        {ocultos({ espera_id: e.id })}
+                        <button type="submit" className={botonTexto}>
+                          Quitar
+                        </button>
+                      </form>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </Seccion>
+      )}
+
+      {esAdmin && !empezada && !sesion.cancelada && disponibles.length > 0 && (
+        <Seccion titulo={libres > 0 ? "Apuntar a un alumno" : "Apuntar a la lista de espera"} id="apuntar">
+          <form action={libres > 0 ? apuntarAlumno : apuntarEspera} className={`${tarjeta} space-y-3 p-4`}>
+            {ocultos()}
+            <div className="space-y-1.5">
+              <label htmlFor="miembro_id" className={etiqueta}>
                 Alumno
               </label>
-              <select
-                id="miembro_id"
-                name="miembro_id"
-                required
-                className="w-full rounded-lg border border-linea bg-white px-3 py-2.5 text-base text-tinta outline-none focus:border-cuadra"
-              >
+              <select id="miembro_id" name="miembro_id" required className={campo}>
                 {disponibles.map((p) => {
                   const titular = p.titular_id ? porId.get(p.titular_id) : null;
                   return (
                     <option key={p.id} value={p.id}>
                       {p.nombre}
                       {titular ? ` (de ${titular.nombre})` : ""}
+                      {p.nivel ? ` · ${p.nivel}` : ""}
                     </option>
                   );
                 })}
               </select>
             </div>
-            <button
-              type="submit"
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cuadra px-4 font-semibold text-white hover:bg-cuadra-hover"
-            >
-              Apuntar
+            <button type="submit" className={`${boton} w-full`}>
+              {libres > 0 ? "Apuntar" : "Apuntar a la espera"}
             </button>
+            {sesion.tipo === "grupo" && (
+              <p className="text-sm text-tinta-suave">Si tiene bono, se le descuenta una clase.</p>
+            )}
           </form>
-          {errorQuery === "apuntar" && (
-            <p className="text-sm text-alerta">No se ha podido apuntar. Puede que la clase se haya llenado.</p>
-          )}
-        </section>
+        </Seccion>
       )}
 
-      {/* Cancelar clase (solo admin y antes de que empiece) */}
       {esAdmin && !empezada && (
-        <section className="space-y-3 rounded-xl border border-linea bg-white p-5">
-          {sesion.cancelada ? (
-            <>
-              <p className="text-sm">Esta clase está cancelada. Los alumnos la ven como cancelada en su horario.</p>
-              <form action={cambiarCancelacion}>
-                <input type="hidden" name="hipica_id" value={id} />
-                <input type="hidden" name="sesion_id" value={sesionId} />
-                <input type="hidden" name="cancelada" value="false" />
-                <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-linea bg-white px-4 text-sm font-semibold hover:border-tinta-suave">
-                  Reactivar clase
-                </button>
-              </form>
-            </>
-          ) : (
-            <>
-              <div>
-                <h2 className="font-semibold">Cancelar esta clase</h2>
+        <Seccion titulo={sesion.cancelada ? "Clase cancelada" : "Cancelar esta clase"} id="cancelar">
+          <div className={`${tarjeta} space-y-3 p-4`}>
+            {sesion.cancelada ? (
+              <>
+                <p className="text-sm">Los alumnos la ven como cancelada y no se les descuenta del bono.</p>
+                <form action={cambiarCancelacion}>
+                  {ocultos({ cancelada: "false" })}
+                  <button type="submit" className={botonSecundario}>
+                    Reactivar clase
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
                 <p className="text-sm text-tinta-suave">
-                  Solo este día. El resto de semanas siguen igual. Avisa a los alumnos por WhatsApp: por
-                  ahora la app no les manda email.
+                  Solo este día; las demás semanas siguen igual. No se descuenta del bono. Avisa a los alumnos por
+                  WhatsApp: por ahora la app no manda mensajes.
                 </p>
-              </div>
-              <form action={cambiarCancelacion} className="space-y-3">
-                <input type="hidden" name="hipica_id" value={id} />
-                <input type="hidden" name="sesion_id" value={sesionId} />
-                <input type="hidden" name="cancelada" value="true" />
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" name="confirmar" value="si" required className="size-4" />
-                  Sí, quiero cancelar la clase de este día
-                </label>
-                {errorQuery === "confirmar" && (
-                  <p className="text-sm text-alerta">Marca la casilla para confirmar.</p>
-                )}
-                <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-alerta px-4 text-sm font-semibold text-white hover:brightness-90">
-                  Cancelar clase
-                </button>
-              </form>
-            </>
-          )}
-        </section>
+                <form action={cambiarCancelacion} className="space-y-3">
+                  {ocultos({ cancelada: "true" })}
+                  <label className="flex min-h-11 items-center gap-3 text-sm">
+                    <input type="checkbox" name="confirmar" value="si" required className="size-5 accent-alerta" />
+                    Sí, quiero cancelar la clase de este día
+                  </label>
+                  <button type="submit" className={botonPeligro}>
+                    Cancelar clase
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </Seccion>
       )}
-    </div>
+    </PantallaApp>
   );
 }

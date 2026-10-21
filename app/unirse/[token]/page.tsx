@@ -29,7 +29,7 @@ async function Contenido({ params, searchParams }: PageProps<"/unirse/[token]">)
     return (
       <>
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Te han invitado</h1>
+          <h1 className="font-titulo text-4xl font-extrabold tracking-tight">Te han invitado</h1>
           <p className="text-tinta-suave">
             Para unirte a tu hípica, entra con tu email. Te mandaremos un enlace.
           </p>
@@ -51,7 +51,7 @@ async function Contenido({ params, searchParams }: PageProps<"/unirse/[token]">)
   if (!inv) {
     return (
       <div className="space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Invitación no válida</h1>
+        <h1 className="font-titulo text-4xl font-extrabold tracking-tight">Invitación no válida</h1>
         <p className="text-tinta-suave">
           El enlace ha caducado o ya se ha usado. Pide uno nuevo a tu hípica.
         </p>
@@ -65,7 +65,7 @@ async function Contenido({ params, searchParams }: PageProps<"/unirse/[token]">)
   return (
     <>
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Únete a {inv.hipica_nombre}</h1>
+        <h1 className="font-titulo text-4xl font-extrabold tracking-tight">Únete a {inv.hipica_nombre}</h1>
         <p className="text-tinta-suave">
           Entrarás como {ROLES[inv.rol] ?? inv.rol}. Dinos cómo te llamas para que la hípica te
           reconozca.

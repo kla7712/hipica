@@ -1,76 +1,25 @@
 import { Suspense } from "react";
-import { notFound, redirect } from "next/navigation";
-import { createClient, getUserId } from "@/lib/supabase/server";
-import { Pantalla, Volver } from "@/components/app/ui";
-import { DIAS_VISTA, HorarioVista, type Jinete, type Sesion } from "./vista";
+import { CargandoApp } from "@/components/app/ui";
+import { cargarContexto } from "@/lib/hipica";
+import { Hoy } from "./hoy";
+import { Inicio } from "./inicio";
 
-export default function HorarioPage({ params, searchParams }: PageProps<"/hipica/[id]">) {
+// Primera pantalla de la hípica: "Hoy" para el equipo, "Inicio" para alumnos y familias.
+export default function HipicaPage({ params, searchParams }: PageProps<"/hipica/[id]">) {
   return (
-    <Pantalla>
-      <Volver href="/">Tus hípicas</Volver>
-      <Suspense fallback={<p className="mt-8 text-tinta-suave">Cargando horario…</p>}>
-        <Contenido params={params} searchParams={searchParams} />
-      </Suspense>
-    </Pantalla>
+    <Suspense fallback={<CargandoApp />}>
+      <Contenido params={params} searchParams={searchParams} />
+    </Suspense>
   );
 }
 
 async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]">) {
   const { id } = await params;
-  const { aviso } = await searchParams;
-
-  const userId = await getUserId();
-  if (!userId) redirect("/login");
-
-  const supabase = await createClient();
-  const { data: yo } = await supabase
-    .from("miembros")
-    .select("id, rol, hipicas(nombre, zona_horaria, horas_minimas_anulacion)")
-    .eq("hipica_id", id)
-    .eq("user_id", userId)
-    .eq("activo", true)
-    .maybeSingle<{
-      id: string;
-      rol: string;
-      hipicas: { nombre: string; zona_horaria: string; horas_minimas_anulacion: number } | null;
-    }>();
-  if (!yo?.hipicas) notFound();
-
-  // Desde 12 h atrás, para que el monitor vea también las clases de hoy ya empezadas.
-  const ahora = new Date();
-  const desde = new Date(ahora.getTime() - 12 * 36e5);
-  const hasta = new Date(ahora.getTime() + DIAS_VISTA * 864e5);
-  const { data, error } = await supabase.rpc("horario", {
-    p_hipica: id,
-    p_desde: desde.toISOString(),
-    p_hasta: hasta.toISOString(),
-  });
-  if (error) throw new Error(error.message);
-  const sesiones = (data ?? []) as Sesion[];
-
-  // Yo y los jinetes a mi cargo.
-  const { data: familia } = await supabase
-    .from("miembros")
-    .select("id, nombre, user_id")
-    .eq("hipica_id", id)
-    .eq("activo", true)
-    .or(`id.eq.${yo.id},titular_id.eq.${yo.id}`)
-    .order("nombre")
-    .returns<{ id: string; nombre: string; user_id: string | null }[]>();
-  const jinetes: Jinete[] = (familia ?? [])
-    .map((m) => ({ id: m.id, nombre: m.nombre, yo: m.user_id === userId }))
-    // Los hijos primero; el titular al final (muchos padres no montan).
-    .sort((a, b) => Number(a.yo) - Number(b.yo));
-
-  return (
-    <HorarioVista
-      id={id}
-      hipica={yo.hipicas}
-      rol={yo.rol}
-      sesiones={sesiones}
-      jinetes={jinetes}
-      aviso={typeof aviso === "string" ? aviso : undefined}
-      ahora={ahora}
-    />
+  const { pista, aviso } = await searchParams;
+  const ctx = await cargarContexto(id);
+  return ctx.esStaff ? (
+    <Hoy ctx={ctx} pista={typeof pista === "string" ? pista : undefined} aviso={aviso} />
+  ) : (
+    <Inicio ctx={ctx} aviso={aviso} />
   );
 }

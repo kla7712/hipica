@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
-import { Aviso, Pantalla, botonSecundario } from "@/components/app/ui";
-import { esCuentaDemo } from "@/lib/demo";
+import { Cabecera, CargandoApp, Icono, PantallaApp, tarjeta } from "@/components/app/ui";
 
 const ROLES = { admin: "Administrador", monitor: "Monitor", alumno: "Alumno" } as const;
 
@@ -12,20 +11,12 @@ type Membresia = {
   hipicas: { id: string; nombre: string } | null;
 };
 
+// Con una sola hípica (lo normal) se entra directamente en ella.
 export default function InicioPage() {
   return (
-    <Pantalla>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight [font-stretch:85%] sm:text-4xl">Tus hípicas</h1>
-        <Link href="/cuenta" className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-tinta-suave hover:text-tinta">
-          Mi cuenta
-        </Link>
-      </div>
-
-      <Suspense fallback={<p className="mt-8 text-tinta-suave">Cargando…</p>}>
-        <ListaHipicas />
-      </Suspense>
-    </Pantalla>
+    <Suspense fallback={<CargandoApp />}>
+      <ListaHipicas />
+    </Suspense>
   );
 }
 
@@ -34,8 +25,6 @@ async function ListaHipicas() {
   if (!userId) redirect("/login");
 
   const supabase = await createClient();
-  const { data: sesion } = await supabase.auth.getClaims();
-  const demo = esCuentaDemo(sesion?.claims?.email);
   const { data, error } = await supabase
     .from("miembros")
     .select("rol, hipicas(id, nombre)")
@@ -44,55 +33,25 @@ async function ListaHipicas() {
     .returns<Membresia[]>();
 
   if (error) throw new Error(error.message);
-  if (!data.length) redirect("/nueva-hipica");
+  const hipicas = data.filter((m) => m.hipicas);
+  if (hipicas.length === 0) redirect("/nueva-hipica");
+  if (hipicas.length === 1) redirect(`/hipica/${hipicas[0].hipicas!.id}`);
 
   return (
-    <>
-    {demo && (
-      <div className="mt-6">
-        <Aviso tipo="info">
-          Estás en la demo. Prueba lo que quieras: reservar, crear clases, invitar… Todo vuelve a su estado original
-          cada noche.
-        </Aviso>
-      </div>
-    )}
-    <ul className="mt-8 space-y-4">
-      {data.map(
-        (m) =>
-          m.hipicas && (
-            <li key={m.hipicas.id} className="overflow-hidden rounded-xl border border-linea bg-white">
-              <Link
-                href={`/hipica/${m.hipicas.id}`}
-                className="group flex items-center justify-between gap-4 px-5 py-5 hover:bg-alfalfa-suave"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-xl font-bold [font-stretch:85%]">{m.hipicas.nombre}</p>
-                  <p className="text-sm text-tinta-suave">{ROLES[m.rol]}</p>
-                </div>
-                <span className="shrink-0 font-semibold text-cuadra">
-                  Ver horario
-                  <svg aria-hidden="true" viewBox="0 0 16 16" className="ml-1 inline size-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="m6 3 5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-              </Link>
-              {m.rol === "admin" && (
-                <div className="flex flex-wrap gap-2 border-t border-linea bg-limo/50 px-5 py-3">
-                  <Link href={`/hipica/${m.hipicas.id}/clases`} className={`${botonSecundario} flex-1 sm:flex-none`}>
-                    Clases
-                  </Link>
-                  <Link href={`/hipica/${m.hipicas.id}/miembros`} className={`${botonSecundario} flex-1 sm:flex-none`}>
-                    Miembros
-                  </Link>
-                  <Link href={`/hipica/${m.hipicas.id}/ajustes`} className={`${botonSecundario} flex-1 sm:flex-none`}>
-                    Ajustes
-                  </Link>
-                </div>
-              )}
-            </li>
-          ),
-      )}
-    </ul>
-    </>
+    <PantallaApp cabecera={<Cabecera titulo="Tus hípicas" detalle="Elige en cuál quieres entrar." />}>
+      <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
+        {hipicas.map((m) => (
+          <li key={m.hipicas!.id}>
+            <Link href={`/hipica/${m.hipicas!.id}`} className="flex items-center gap-3 px-4 py-4 hover:bg-limo">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-lg font-extrabold">{m.hipicas!.nombre}</span>
+                <span className="block text-sm text-tinta-suave">{ROLES[m.rol]}</span>
+              </span>
+              <Icono nombre="flecha" className="size-5 text-tinta-suave" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </PantallaApp>
   );
 }

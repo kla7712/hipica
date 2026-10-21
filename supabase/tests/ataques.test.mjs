@@ -54,7 +54,7 @@ const tokMon = one(await as(U.admin, `insert into public.invitaciones (hipica_id
 await as(U.monitor, `select public.aceptar_invitacion($1, 'Mario Monitor')`, [tokMon]);
 await as(U.alumno, `select public.aceptar_invitacion($1, 'Alba Alumna')`, [tokAlumno]);
 await as(U.alumno2, `select public.aceptar_invitacion($1, 'Luis Alumno')`, [tokAlumno]);
-await db.exec(`update public.miembros set telefono = '600111222'`); // todos con teléfono
+await db.exec(`select set_config('request.jwt.claim.sub', '', false); update public.miembros set telefono = '600111222'`); // todos con teléfono
 const idAdmin = one(await db.query(`select id from public.miembros where user_id = $1`, [U.admin]));
 const idAlumno = one(await db.query(`select id from public.miembros where user_id = $1`, [U.alumno]));
 const idAlumno2 = one(await db.query(`select id from public.miembros where user_id = $1`, [U.alumno2]));

@@ -1,11 +1,26 @@
 import { Suspense } from "react";
-import { notFound, redirect } from "next/navigation";
-import { createClient, getUserId } from "@/lib/supabase/server";
-import { Aviso, Cabecera, Pantalla, Volver, boton, campo, etiqueta } from "@/components/app/ui";
+import Link from "next/link";
+import {
+  Aviso,
+  Cabecera,
+  CargandoApp,
+  Chip,
+  Icono,
+  Inicial,
+  PantallaApp,
+  Seccion,
+  boton,
+  botonTexto,
+  campo,
+  etiqueta,
+  tarjeta,
+} from "@/components/app/ui";
+import { cargarContexto, fechas, navegacion } from "@/lib/hipica";
+import { resumenBono, type EstadoBono } from "@/lib/tipos";
 import { anadirJinete, quitarJinete } from "./actions";
 
 const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
-  anadido: { tipo: "ok", texto: "Añadido. Ya puedes reservarle clases desde el horario." },
+  anadido: { tipo: "ok", texto: "Añadido. Ya puedes reservarle clases en Reservar." },
   nombre: { tipo: "error", texto: "Escribe el nombre." },
   maximo: { tipo: "error", texto: "Puedes tener hasta 6 jinetes a tu cargo." },
   anadir: { tipo: "error", texto: "No se ha podido añadir. Vuelve a intentarlo." },
@@ -13,11 +28,9 @@ const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
 
 export default function FamiliaPage({ params, searchParams }: PageProps<"/hipica/[id]/familia">) {
   return (
-    <Pantalla>
-      <Suspense fallback={<p className="text-tinta-suave">Cargando…</p>}>
-        <Contenido params={params} searchParams={searchParams} />
-      </Suspense>
-    </Pantalla>
+    <Suspense fallback={<CargandoApp />}>
+      <Contenido params={params} searchParams={searchParams} />
+    </Suspense>
   );
 }
 
@@ -26,86 +39,100 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
   const { ok, error } = await searchParams;
   const codigo = typeof ok === "string" ? ok : typeof error === "string" ? error : null;
   const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
+  const ctx = await cargarContexto(id);
+  const { supabase, hipica } = ctx;
 
-  const userId = await getUserId();
-  if (!userId) redirect("/login");
+  const { data } = await supabase.rpc("estado_bonos", { p_hipica: id });
+  const estado = ((data ?? []) as EstadoBono[]).filter((b) => b.miembro_id === ctx.yo.id || b.titular_id === ctx.yo.id);
+  const yo = estado.find((b) => b.miembro_id === ctx.yo.id);
+  const hijos = estado.filter((b) => b.titular_id === ctx.yo.id);
+  const hoy = fechas(hipica.zona_horaria).clave(new Date());
 
-  const supabase = await createClient();
-  const { data: yo } = await supabase
-    .from("miembros")
-    .select("id, nombre")
-    .eq("hipica_id", id)
-    .eq("user_id", userId)
-    .eq("activo", true)
-    .maybeSingle<{ id: string; nombre: string }>();
-  if (!yo) notFound();
-
-  const { data: hijos } = await supabase
-    .from("miembros")
-    .select("id, nombre")
-    .eq("titular_id", yo.id)
-    .eq("activo", true)
-    .order("nombre")
-    .returns<{ id: string; nombre: string }[]>();
+  const fila = (b: EstadoBono, esYo: boolean) => {
+    const r = resumenBono(b, hoy);
+    return (
+      <li key={b.miembro_id} className="flex flex-wrap items-center gap-3 px-4 py-3.5">
+        <Inicial nombre={b.nombre} tono={esYo ? "verde" : "neutro"} />
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold">
+            {b.nombre}
+            {esYo && " (tú)"}
+          </span>
+          <span className="block text-sm text-tinta-suave">{b.nivel ?? "Nivel sin indicar"}</span>
+        </span>
+        {(b.bono_id || !esYo || hijos.length === 0) && <Chip tono={r.tono}>{r.texto}</Chip>}
+        {!esYo && (
+          <details className="w-full text-right text-sm">
+            <summary className={`${botonTexto} cursor-pointer list-none hover:text-alerta`}>Quitar</summary>
+            <form action={quitarJinete} className="mt-2 space-y-2 rounded-xl bg-alerta-suave p-3 text-left">
+              <input type="hidden" name="hipica_id" value={id} />
+              <input type="hidden" name="miembro_id" value={b.miembro_id} />
+              <p className="text-alerta">Se anularán sus reservas futuras.</p>
+              <button type="submit" className="inline-flex min-h-11 items-center rounded-xl bg-alerta px-4 font-bold text-white">
+                Quitar a {b.nombre}
+              </button>
+            </form>
+          </details>
+        )}
+      </li>
+    );
+  };
 
   return (
-    <div className="space-y-8">
-      <Volver href={`/hipica/${id}`}>Horario</Volver>
-      <Cabecera
-        titulo="Mi familia"
-        detalle="Añade a los jinetes que dependen de ti, como tus hijos. Podrás reservar para cada uno desde tu cuenta."
-      />
+    <PantallaApp
+      nav={navegacion(id, ctx.yo.rol, "familia")}
+      cabecera={
+        <Cabecera
+          antetitulo={hipica.nombre}
+          titulo={hijos.length ? "Tu familia" : "Tu ficha"}
+          detalle="Quién monta, su nivel y cómo va su bono."
+          demo={ctx.demo}
+        />
+      }
+    >
+      {mensaje && (
+        <div className="mb-5">
+          <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso>
+        </div>
+      )}
 
-      {mensaje && <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso>}
+      <Seccion titulo="Jinetes" id="jinetes">
+        <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
+          {hijos.map((h) => fila(h, false))}
+          {yo && fila(yo, true)}
+        </ul>
+        <p className="mt-3 text-sm text-tinta-suave">
+          El nivel lo pone la hípica. Para comprar o renovar un bono, pídelo en recepción.
+        </p>
+      </Seccion>
 
-      <ul className="divide-y divide-linea overflow-hidden rounded-xl border border-linea bg-white">
-        <li className="flex items-center justify-between gap-4 p-4">
-          <div>
-            <p className="font-semibold">{yo.nombre}</p>
-            <p className="text-sm text-tinta-suave">Tú, titular de la cuenta</p>
-          </div>
-        </li>
-        {(hijos ?? []).map((h) => (
-          <li key={h.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
-            <div>
-              <p className="font-semibold">{h.nombre}</p>
-              <p className="text-sm text-tinta-suave">A tu cargo</p>
-            </div>
-            <details className="text-sm">
-              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-lg px-3 font-medium text-tinta-suave hover:text-alerta">
-                Quitar
-              </summary>
-              <form action={quitarJinete} className="mt-2 space-y-2 rounded-lg border border-alerta/30 bg-alerta-suave p-3">
-                <input type="hidden" name="hipica_id" value={id} />
-                <input type="hidden" name="miembro_id" value={h.id} />
-                <p className="text-alerta">Se anularán sus reservas futuras.</p>
-                <button type="submit" className="inline-flex min-h-11 items-center rounded-lg bg-alerta px-4 font-semibold text-white hover:brightness-90">
-                  Quitar a {h.nombre}
-                </button>
-              </form>
-            </details>
-          </li>
-        ))}
-      </ul>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold [font-stretch:85%]">Añadir un jinete</h2>
-        <form action={anadirJinete} className="flex flex-wrap items-end gap-3">
+      <Seccion titulo="Añadir un hijo o hija" id="anadir">
+        <form action={anadirJinete} className={`${tarjeta} space-y-3 p-4`}>
           <input type="hidden" name="hipica_id" value={id} />
-          <div className="min-w-0 flex-1 basis-60 space-y-2">
+          <div className="space-y-1.5">
             <label htmlFor="nombre" className={etiqueta}>
               Nombre y apellido
             </label>
             <input id="nombre" name="nombre" required maxLength={120} className={campo} />
           </div>
-          <button type="submit" className={boton}>
+          <button type="submit" className={`${boton} w-full`}>
             Añadir
           </button>
+          <p className="text-sm text-tinta-suave">
+            Solo guardamos el nombre. Reservarás por él desde tu cuenta; no necesita email ni móvil.
+          </p>
         </form>
-        <p className="text-sm text-tinta-suave">
-          Solo guardamos el nombre. No hace falta email ni teléfono para los jinetes a tu cargo.
-        </p>
-      </section>
-    </div>
+      </Seccion>
+
+      <Seccion titulo="Tu cuenta" id="cuenta">
+        <Link href="/cuenta" className={`${tarjeta} flex items-center gap-3 px-4 py-4 hover:bg-white/70`}>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Mi cuenta</span>
+            <span className="block text-sm text-tinta-suave">Email, cerrar sesión y borrar la cuenta</span>
+          </span>
+          <Icono nombre="flecha" className="size-5 text-tinta-suave" />
+        </Link>
+      </Seccion>
+    </PantallaApp>
   );
 }

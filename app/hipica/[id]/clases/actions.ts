@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-const UUID = /^[0-9a-f-]{36}$/i;
+import { UUID } from "@/lib/rutas";
 
 function volver(hipicaId: string, query: string): never {
   redirect(`/hipica/${hipicaId}/clases?${query}`);
@@ -21,6 +21,8 @@ export async function crearClase(formData: FormData) {
   const horaInicio = String(formData.get("hora_inicio") ?? "");
   const duracionMin = Number(formData.get("duracion_min"));
   const plazas = Number(formData.get("plazas"));
+  const tipo = String(formData.get("tipo") ?? "grupo");
+  const pistaId = String(formData.get("pista_id") ?? "") || null;
 
   const valido =
     titulo.length >= 1 &&
@@ -29,7 +31,9 @@ export async function crearClase(formData: FormData) {
     /^\d{2}:\d{2}$/.test(horaInicio) &&
     Number.isInteger(duracionMin) && duracionMin >= 15 && duracionMin <= 480 &&
     Number.isInteger(plazas) && plazas >= 1 && plazas <= 100 &&
-    (monitorId === null || UUID.test(monitorId));
+    ["grupo", "particular", "libre"].includes(tipo) &&
+    (monitorId === null || UUID.test(monitorId)) &&
+    (pistaId === null || UUID.test(pistaId));
   if (!valido) volver(hipicaId, "error=datos");
 
   const supabase = await createClient();
@@ -42,6 +46,8 @@ export async function crearClase(formData: FormData) {
     hora_inicio: horaInicio,
     duracion_min: duracionMin,
     plazas,
+    tipo,
+    pista_id: pistaId,
   });
 
   if (error) {

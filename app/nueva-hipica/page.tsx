@@ -13,7 +13,7 @@ export default function NuevaHipicaPage({ searchParams }: PageProps<"/nueva-hipi
     <Pantalla ancho="estrecho">
       <div className="space-y-8 pt-8 sm:pt-16">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Crea tu hípica</h1>
+          <h1 className="font-titulo text-4xl font-extrabold tracking-tight">Crea tu hípica</h1>
           <p className="text-tinta-suave">
             Serás su administrador. Después podrás crear las clases e invitar a monitores y alumnos.
           </p>

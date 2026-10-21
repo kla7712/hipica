@@ -43,6 +43,26 @@ const h2 = (await root(`select public.reset_demo() as h`)).rows[0].h;
 const total = (await root(`select count(*)::int n from public.hipicas`)).rows[0].n;
 check('reset borra la demo anterior y lo que crearon los usuarios demo', total === 1 && h2 !== h1, `(${total})`);
 check('el nombre vuelve a su estado original', (await root(`select nombre from public.hipicas where id = $1`, [h2])).rows[0].nombre === 'Hípica La Dehesa');
+
+// Novedades de la escuela (0007)
+const cuenta = async (sql, p = [h2]) => (await root(sql, p)).rows[0].n;
+check('la demo tiene 3 pistas', await cuenta(`select count(*)::int n from public.pistas where hipica_id = $1`) === 3);
+check('la demo tiene caballos, uno en reposo', await cuenta(`select count(*)::int n from public.caballos where hipica_id = $1`) === 8
+  && await cuenta(`select count(*)::int n from public.caballos where hipica_id = $1 and not disponible`) === 1);
+check('hay clases hoy o mañana', await cuenta(`select count(*)::int n from public.sesiones where hipica_id = $1 and inicio < now() + interval '1 day'`) > 0);
+check('hay alguien en lista de espera', await cuenta(`select count(*)::int n from public.esperas where hipica_id = $1`) === 2);
+check('hay caballos asignados', await cuenta(`select count(*)::int n from public.reservas where hipica_id = $1 and caballo_id is not null`) > 5);
+check('ningún caballo repetido en una clase', await cuenta(`select count(*)::int n from (select sesion_id, caballo_id from public.reservas where hipica_id = $1 and caballo_id is not null group by 1, 2 having count(*) > 1) x`) === 0);
+check('hay tablón', await cuenta(`select count(*)::int n from public.avisos where hipica_id = $1`) === 2);
+const bf = (await as(F, `select * from public.estado_bonos($1)`, [h2])).rows;
+console.log('      bonos familia:', bf.map(b => `${b.nombre} ${b.usadas ?? '-'}/${b.clases ?? '-'}`).join(', '));
+check('la familia ve los bonos de Lucía y Pablo', bf.filter(b => b.bono_id).length === 2);
+const pab = bf.find(b => b.nombre === 'Pablo López');
+check('a Pablo le queda una clase', pab && pab.clases - pab.usadas === 1, JSON.stringify(pab));
+const ba = (await as(A, `select * from public.estado_bonos($1)`, [h2])).rows;
+check('el admin ve alumnos sin bono y con bono agotado', ba.some(b => !b.bono_id) && ba.some(b => b.bono_id && b.usadas >= b.clases));
+const esp = (await as(F, `select * from public.horario($1, now(), now() + interval '14 days')`, [h2])).rows.filter(r => r.esperas.length);
+check('la familia ve a Pablo en una lista de espera', esp.length === 1 && esp[0].esperas[0].nombre === 'Pablo López', JSON.stringify(esp.map(e => e.esperas)));
 try { await as(A, `select public.borrar_mi_cuenta()`); check('la cuenta demo no se puede borrar', false); }
 catch (e) { check('la cuenta demo no se puede borrar', /demostración/.test(e.message), e.message); }
 try { await as(A, `select public.reset_demo()`); check('la app no puede lanzar reset_demo', false); }

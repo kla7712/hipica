@@ -1,214 +1,280 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
-import { createClient, getUserId } from "@/lib/supabase/server";
-import { Pantalla, Volver } from "@/components/app/ui";
+import {
+  Aviso,
+  Cabecera,
+  CargandoApp,
+  Chip,
+  Cifras,
+  Filtros,
+  Icono,
+  Inicial,
+  PantallaApp,
+  Seccion,
+  Vacio,
+  boton,
+  botonSecundario,
+  botonTexto,
+  campo,
+  etiqueta,
+  tarjeta,
+} from "@/components/app/ui";
+import { cargarContexto, fechas, navegacion } from "@/lib/hipica";
+import { resumenBono, type EstadoBono } from "@/lib/tipos";
 import { anadirSinCuenta, borrarInvitacion, crearInvitacion, darDeBaja } from "./actions";
 
-const ROLES: Record<string, string> = { admin: "Administrador", monitor: "Monitor", alumno: "Alumno" };
-
-type Miembro = {
-  id: string;
-  nombre: string;
-  rol: string;
-  telefono: string | null;
-  user_id: string | null;
-  titular_id: string | null;
-};
+type Persona = { id: string; nombre: string; rol: string; telefono: string | null; user_id: string | null };
 type Invitacion = { id: string; rol: string; token: string; usos: number; usos_max: number | null; expira_en: string };
+
+const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
+  baja: { tipo: "ok", texto: "Dado de baja. Sus reservas futuras se han anulado." },
+  "error-baja": { tipo: "error", texto: "No se ha podido dar de baja." },
+  "error-invitar": { tipo: "error", texto: "No se ha podido crear la invitación. Vuelve a intentarlo." },
+  "error-sincuenta": { tipo: "error", texto: "No se ha podido añadir. Revisa el nombre." },
+};
 
 export default function MiembrosPage({ params, searchParams }: PageProps<"/hipica/[id]/miembros">) {
   return (
-    <Pantalla>
-      <Volver href="/">Tus hípicas</Volver>
-      <Suspense fallback={<p className="mt-6 text-sm text-tinta-suave">Cargando…</p>}>
-        <Contenido params={params} searchParams={searchParams} />
-      </Suspense>
-    </Pantalla>
+    <Suspense fallback={<CargandoApp />}>
+      <Contenido params={params} searchParams={searchParams} />
+    </Suspense>
   );
 }
 
 async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miembros">) {
   const { id } = await params;
-  const { error: errorQuery } = await searchParams;
+  const { f: filtroQ, ok, error: codigoError } = await searchParams;
+  const ctx = await cargarContexto(id);
+  const { supabase, hipica } = ctx;
+  const nav = navegacion(id, ctx.yo.rol, "miembros");
+  const base = `/hipica/${id}`;
 
-  const userId = await getUserId();
-  if (!userId) redirect("/login");
-
-  const supabase = await createClient();
-  const { data: yo } = await supabase
-    .from("miembros")
-    .select("rol, hipicas(nombre)")
-    .eq("hipica_id", id)
-    .eq("user_id", userId)
-    .maybeSingle<{ rol: string; hipicas: { nombre: string } | null }>();
-  if (!yo) notFound();
-  if (yo.rol !== "admin") {
-    return <p className="mt-8 text-tinta-suave">Solo el administrador puede gestionar los miembros.</p>;
+  if (!ctx.esAdmin) {
+    return (
+      <PantallaApp nav={nav} cabecera={<Cabecera antetitulo={hipica.nombre} titulo="Alumnos" />}>
+        <Vacio>Solo el administrador puede gestionar los alumnos.</Vacio>
+      </PantallaApp>
+    );
   }
 
-  const ahora = new Date().toISOString();
-  const [{ data: miembros }, { data: invitaciones }] = await Promise.all([
+  const ahora = new Date();
+  const [{ data: estado }, { data: equipo }, { data: invitaciones }] = await Promise.all([
+    supabase.rpc("estado_bonos", { p_hipica: id }),
     supabase
       .from("miembros")
-      .select("id, nombre, rol, telefono, user_id, titular_id")
+      .select("id, nombre, rol, telefono, user_id")
       .eq("hipica_id", id)
       .eq("activo", true)
+      .in("rol", ["admin", "monitor"])
       .order("rol")
       .order("nombre")
-      .returns<Miembro[]>(),
+      .returns<Persona[]>(),
     supabase
       .from("invitaciones")
       .select("id, rol, token, usos, usos_max, expira_en")
       .eq("hipica_id", id)
-      .gt("expira_en", ahora)
+      .gt("expira_en", ahora.toISOString())
       .order("created_at", { ascending: false })
       .returns<Invitacion[]>(),
   ]);
 
-  // Titulares primero y, justo debajo de cada uno, sus jinetes a cargo.
-  const todos = miembros ?? [];
-  const porId = new Map(todos.map((m) => [m.id, m]));
-  const ordenados = todos
-    .filter((m) => !m.titular_id)
-    .flatMap((t) => [t, ...todos.filter((m) => m.titular_id === t.id)]);
+  const hoy = fechas(hipica.zona_horaria).clave(ahora);
+  const alumnos = (estado ?? []) as EstadoBono[];
+  const porId = new Map(alumnos.map((a) => [a.miembro_id, a]));
+  // Titulares que no montan (no tienen bono y sí jinetes a cargo) no cuentan como alumnos.
+  const jinetes = alumnos.filter((a) => a.bono_id || !alumnos.some((x) => x.titular_id === a.miembro_id));
+  const renovar = jinetes.filter((a) => a.bono_id && resumenBono(a, hoy).renovar);
+  const sinBono = jinetes.filter((a) => !a.bono_id);
+  const filtro = filtroQ === "renovar" || filtroQ === "sinbono" ? filtroQ : "todos";
+  const lista = filtro === "renovar" ? renovar : filtro === "sinbono" ? sinBono : alumnos;
 
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  const base = `${proto}://${host}`;
-
+  const enlaceBase = `${proto}://${host}`;
   const activas = (invitaciones ?? []).filter((i) => i.usos_max === null || i.usos < i.usos_max);
-  const fFecha = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long" });
+  const fFecha = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: hipica.zona_horaria });
+
+  const codigo = typeof ok === "string" ? ok : typeof codigoError === "string" ? `error-${codigoError}` : null;
+  const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
 
   return (
-    <div className="mt-4 space-y-10">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight [font-stretch:85%] sm:text-4xl">Miembros</h1>
-        <p className="text-sm text-tinta-suave">{yo.hipicas?.nombre}</p>
-      </div>
-
-      {errorQuery === "baja" && (
-        <p className="rounded-lg border border-alerta/30 bg-alerta-suave px-4 py-3 text-sm text-alerta">
-          No se ha podido dar de baja a ese miembro.
-        </p>
-      )}
-      {errorQuery === "invitar" && (
-        <p className="rounded-lg border border-alerta/30 bg-alerta-suave px-4 py-3 text-sm text-alerta">
-          No se ha podido crear la invitación. Vuelve a intentarlo.
-        </p>
-      )}
-
-      {/* Invitar */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="font-semibold">Invitar</h2>
-          <p className="text-sm text-tinta-suave">
-            Comparte el enlace por WhatsApp. Quien lo abra entra con su email y queda unido a tu hípica.
-          </p>
+    <PantallaApp
+      nav={nav}
+      cabecera={
+        <Cabecera antetitulo={hipica.nombre} titulo="Alumnos" demo={ctx.demo}>
+          <Cifras
+            items={[
+              { valor: jinetes.length, texto: "alumnos", href: `${base}/miembros` },
+              { valor: renovar.length, texto: "bonos por renovar", href: `${base}/miembros?f=renovar` },
+              { valor: sinBono.length, texto: "sin bono", href: `${base}/miembros?f=sinbono` },
+            ]}
+          />
+        </Cabecera>
+      }
+    >
+      {mensaje && (
+        <div className="mb-5">
+          <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <form action={crearInvitacion}>
-            <input type="hidden" name="hipica_id" value={id} />
-            <input type="hidden" name="rol" value="alumno" />
-            <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cuadra px-4 font-semibold text-white hover:bg-cuadra-hover">
-              Enlace para alumnos
-            </button>
-          </form>
-          <form action={crearInvitacion}>
-            <input type="hidden" name="hipica_id" value={id} />
-            <input type="hidden" name="rol" value="monitor" />
-            <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-linea bg-white px-4 font-semibold hover:border-tinta-suave">
-              Invitar a un monitor
-            </button>
-          </form>
-        </div>
+      )}
 
-        {activas.length > 0 && (
-          <ul className="space-y-3">
-            {activas.map((inv) => {
-              const url = `${base}/unirse/${inv.token}`;
-              const texto = `Únete a ${yo.hipicas?.nombre} para reservar tus clases: ${url}`;
+      <Seccion titulo="Alumnos" id="alumnos">
+        <div className="mb-3">
+          <Filtros
+            opciones={[
+              { texto: "Todos", href: `${base}/miembros`, activo: filtro === "todos" },
+              { texto: `Por renovar (${renovar.length})`, href: `${base}/miembros?f=renovar`, activo: filtro === "renovar" },
+              { texto: `Sin bono (${sinBono.length})`, href: `${base}/miembros?f=sinbono`, activo: filtro === "sinbono" },
+            ]}
+          />
+        </div>
+        {lista.length === 0 ? (
+          <Vacio>{filtro === "todos" ? "Aún no hay alumnos. Invítalos con el enlace de abajo." : "Nadie en esta lista."}</Vacio>
+        ) : (
+          <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
+            {lista.map((a) => {
+              const r = resumenBono(a, hoy);
+              const titular = a.titular_id ? porId.get(a.titular_id) : null;
+              const esTitularSinMontar = !a.bono_id && alumnos.some((x) => x.titular_id === a.miembro_id);
               return (
-                <li key={inv.id} className="space-y-3 rounded-xl border border-linea bg-white p-4">
-                  <p className="text-sm">
-                    <span className="font-semibold">{inv.rol === "alumno" ? "Alumnos" : "Monitor"}</span>
-                    <span className="text-tinta-suave">
-                      {" · "}
-                      {inv.usos_max === null ? `${inv.usos} ${inv.usos === 1 ? "uso" : "usos"}` : "un solo uso"}
-                      {" · caduca el "}
-                      {fFecha.format(new Date(inv.expira_en))}
+                <li key={a.miembro_id}>
+                  <Link href={`${base}/miembros/${a.miembro_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-limo">
+                    <Inicial nombre={a.nombre} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold">{a.nombre}</span>
+                      <span className="block text-sm text-tinta-suave">
+                        {[
+                          a.nivel ?? (esTitularSinMontar ? null : "Sin nivel"),
+                          titular && `de ${titular.nombre}`,
+                          esTitularSinMontar && "Titular de la cuenta",
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
                     </span>
-                  </p>
-                  <label className="sr-only" htmlFor={`url-${inv.id}`}>
-                    Enlace de invitación
-                  </label>
-                  <input
-                    id={`url-${inv.id}`}
-                    readOnly
-                    value={url}
-                    className="w-full rounded-lg border border-linea bg-limo px-3 py-2 text-sm text-tinta-suave"
-                  />
-                  <div className="flex flex-wrap gap-3">
-                    <a
-                      href={`https://wa.me/?text=${encodeURIComponent(texto)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cuadra px-4 text-sm font-semibold text-white hover:bg-cuadra-hover"
-                    >
-                      Enviar por WhatsApp
-                    </a>
-                    <form action={borrarInvitacion}>
-                      <input type="hidden" name="hipica_id" value={id} />
-                      <input type="hidden" name="invitacion_id" value={inv.id} />
-                      <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-linea bg-white px-4 text-sm font-semibold hover:border-tinta-suave">
-                        Desactivar
-                      </button>
-                    </form>
-                  </div>
+                    {!esTitularSinMontar && <Chip tono={r.tono}>{r.texto}</Chip>}
+                    <Icono nombre="flecha" className="size-5 shrink-0 text-tinta-suave" />
+                  </Link>
                 </li>
               );
             })}
           </ul>
         )}
-      </section>
+      </Seccion>
 
-      {/* Lista de miembros */}
-      <section className="space-y-3">
-        <h2 className="font-semibold">Miembros ({miembros?.length ?? 0})</h2>
-        <p className="text-sm text-tinta-suave">
-          Los jinetes a cargo de otro miembro (por ejemplo, hijos) aparecen debajo de su titular.
-        </p>
-        <ul className="divide-y divide-linea overflow-hidden rounded-xl border border-linea bg-white">
-          {ordenados.map((m) => (
-            <li
-              key={m.id}
-              className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4 ${m.titular_id ? "bg-limo/40 pl-10" : ""}`}
-            >
-              <div className="min-w-0">
-                <p className="font-semibold">{m.nombre}</p>
-                <p className="text-sm text-tinta-suave">
-                  {m.titular_id
-                    ? `A cargo de ${porId.get(m.titular_id)?.nombre ?? "otro miembro"}`
-                    : m.user_id
-                      ? (ROLES[m.rol] ?? m.rol)
-                      : "Alumno sin cuenta"}
-                  {m.telefono && <>, {m.telefono}</>}
+      <Seccion titulo="Invitar alumnos" id="invitar">
+        <div className={`${tarjeta} space-y-4 p-4`}>
+          <p className="text-sm text-tinta-suave">
+            Comparte el enlace por WhatsApp. Quien lo abra entra con su email y queda unido a tu hípica. Las familias
+            pueden añadir después a sus hijos.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <form action={crearInvitacion}>
+              <input type="hidden" name="hipica_id" value={id} />
+              <input type="hidden" name="rol" value="alumno" />
+              <button type="submit" className={boton}>
+                Crear enlace para alumnos
+              </button>
+            </form>
+            <form action={crearInvitacion}>
+              <input type="hidden" name="hipica_id" value={id} />
+              <input type="hidden" name="rol" value="monitor" />
+              <button type="submit" className={botonSecundario}>
+                Invitar a un monitor
+              </button>
+            </form>
+          </div>
+          {activas.map((inv) => {
+            const url = `${enlaceBase}/unirse/${inv.token}`;
+            const texto = `Únete a ${hipica.nombre} para reservar tus clases: ${url}`;
+            return (
+              <div key={inv.id} className="space-y-2 rounded-xl bg-limo p-3">
+                <p className="text-sm">
+                  <span className="font-bold">{inv.rol === "alumno" ? "Enlace para alumnos" : "Enlace para un monitor"}</span>
+                  <span className="text-tinta-suave">
+                    {" · "}
+                    {inv.usos_max === null ? `${inv.usos} ${inv.usos === 1 ? "uso" : "usos"}` : "un solo uso"} · caduca el{" "}
+                    {fFecha.format(new Date(inv.expira_en))}
+                  </span>
                 </p>
+                <label className="sr-only" htmlFor={`url-${inv.id}`}>
+                  Enlace de invitación
+                </label>
+                <input id={`url-${inv.id}`} readOnly value={url} className={`${campo} text-sm text-tinta-suave`} />
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(texto)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${boton} text-sm`}
+                  >
+                    Enviar por WhatsApp
+                  </a>
+                  <form action={borrarInvitacion}>
+                    <input type="hidden" name="hipica_id" value={id} />
+                    <input type="hidden" name="invitacion_id" value={inv.id} />
+                    <button type="submit" className={botonTexto}>
+                      Desactivar
+                    </button>
+                  </form>
+                </div>
               </div>
-              {m.rol !== "admin" && (
-                <details className="group text-sm">
-                  <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-lg px-3 font-medium text-tinta-suave hover:text-alerta">
-                    Dar de baja
-                  </summary>
-                  <form action={darDeBaja} className="mt-2 space-y-2 rounded-lg border border-alerta/30 bg-alerta-suave p-3">
+            );
+          })}
+        </div>
+      </Seccion>
+
+      <Seccion titulo="Alumno sin cuenta" id="sincuenta">
+        <form action={anadirSinCuenta} className={`${tarjeta} space-y-3 p-4`}>
+          <input type="hidden" name="hipica_id" value={id} />
+          <p className="text-sm text-tinta-suave">
+            Para quien reserva por teléfono o no usa el móvil. Tú le apuntas a las clases y le pones el bono.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-[1fr_12rem]">
+            <div className="space-y-1.5">
+              <label htmlFor="sc-nombre" className={etiqueta}>
+                Nombre y apellido
+              </label>
+              <input id="sc-nombre" name="nombre" required maxLength={120} className={campo} />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="sc-telefono" className={etiqueta}>
+                Teléfono <span className="font-normal text-tinta-suave">(opcional)</span>
+              </label>
+              <input id="sc-telefono" name="telefono" type="tel" maxLength={30} className={campo} />
+            </div>
+          </div>
+          <button type="submit" className={`${boton} w-full`}>
+            Añadir alumno
+          </button>
+        </form>
+      </Seccion>
+
+      <Seccion titulo="Equipo" id="equipo">
+        <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
+          {(equipo ?? []).map((m) => (
+            <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <Inicial nombre={m.nombre} tono="verde" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold">
+                  {m.nombre}
+                  {m.user_id === ctx.userId && " (tú)"}
+                </span>
+                <span className="block text-sm text-tinta-suave">
+                  {m.rol === "admin" ? "Administrador" : "Monitor"}
+                  {m.telefono && ` · ${m.telefono}`}
+                </span>
+              </span>
+              {m.rol === "monitor" && (
+                <details className="text-sm">
+                  <summary className={`${botonTexto} cursor-pointer list-none hover:text-alerta`}>Dar de baja</summary>
+                  <form action={darDeBaja} className="mt-2 space-y-2 rounded-xl bg-alerta-suave p-3">
                     <input type="hidden" name="hipica_id" value={id} />
                     <input type="hidden" name="miembro_id" value={m.id} />
-                    <p className="text-alerta">
-                      {m.nombre} dejará de ver la hípica y se anularán sus reservas futuras. No podrá volver a
-                      entrar con un enlace.
-                    </p>
-                    <button type="submit" className="inline-flex min-h-11 items-center rounded-lg bg-alerta px-4 font-semibold text-white hover:brightness-90">
+                    <p className="text-alerta">{m.nombre} dejará de ver la hípica.</p>
+                    <button type="submit" className="inline-flex min-h-11 items-center rounded-xl bg-alerta px-4 font-bold text-white">
                       Confirmar baja
                     </button>
                   </form>
@@ -217,55 +283,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
             </li>
           ))}
         </ul>
-      </section>
-
-      {/* Alumno sin cuenta */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="font-semibold">Añadir un alumno sin cuenta</h2>
-          <p className="text-sm text-tinta-suave">
-            Para quien reserva por teléfono o no usa el móvil. Tú le apuntas a las clases desde la lista de cada clase.
-          </p>
-        </div>
-        {errorQuery === "sincuenta" && (
-          <p className="rounded-lg border border-alerta/30 bg-alerta-suave px-4 py-3 text-sm text-alerta">
-            No se ha podido añadir. Revisa el nombre.
-          </p>
-        )}
-        <form action={anadirSinCuenta} className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
-          <input type="hidden" name="hipica_id" value={id} />
-          <div className="space-y-1">
-            <label htmlFor="sc-nombre" className="text-sm font-semibold">
-              Nombre y apellido
-            </label>
-            <input
-              id="sc-nombre"
-              name="nombre"
-              required
-              maxLength={120}
-              className="w-full rounded-lg border border-linea bg-white px-3 py-2.5 text-base text-tinta outline-none focus:border-cuadra"
-            />
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="sc-telefono" className="text-sm font-semibold">
-              Teléfono <span className="font-normal text-tinta-suave">(opcional)</span>
-            </label>
-            <input
-              id="sc-telefono"
-              name="telefono"
-              type="tel"
-              maxLength={30}
-              className="w-full rounded-lg border border-linea bg-white px-3 py-2.5 text-base text-tinta outline-none focus:border-cuadra"
-            />
-          </div>
-          <button
-            type="submit"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cuadra px-4 font-semibold text-white hover:bg-cuadra-hover"
-          >
-            Añadir
-          </button>
-        </form>
-      </section>
-    </div>
+      </Seccion>
+    </PantallaApp>
   );
 }

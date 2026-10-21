@@ -26,7 +26,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
     <Pantalla ancho="estrecho">
       <div className="space-y-8 pt-8 sm:pt-16">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight [font-stretch:85%]">Entra en tu hípica</h1>
+          <h1 className="font-titulo text-4xl font-extrabold tracking-tight">Entra en tu hípica</h1>
           <p className="text-tinta-suave">Te enviamos un código al email para entrar. Sin contraseñas.</p>
         </div>
         <Suspense>
