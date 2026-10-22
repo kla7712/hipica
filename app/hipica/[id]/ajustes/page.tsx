@@ -17,12 +17,24 @@ import {
   tarjeta,
 } from "@/components/app/ui";
 import { cargarContexto, euros, navegacion } from "@/lib/hipica";
-import { borrarServicio, cambiarPista, crearPista, crearServicio, guardarAjustes, serviciosTipicos } from "./actions";
+import {
+  borrarServicio,
+  borrarTarifaBono,
+  cambiarPista,
+  crearPista,
+  crearServicio,
+  guardarAjustes,
+  guardarTarifaBono,
+  guardarTarifas,
+  serviciosTipicos,
+} from "./actions";
 
 const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
   guardado: { tipo: "ok", texto: "Ajustes guardados." },
   pista: { tipo: "ok", texto: "Pista añadida." },
   servicio: { tipo: "ok", texto: "Servicios actualizados." },
+  tarifas: { tipo: "ok", texto: "Tarifas guardadas." },
+  "error-tarifas": { tipo: "error", texto: "Revisa los precios." },
   "error-servicio": { tipo: "error", texto: "No se ha podido añadir el servicio. Revisa el nombre y el precio." },
   "error-datos": { tipo: "error", texto: "Revisa los datos." },
   "error-guardar": { tipo: "error", texto: "No se han podido guardar los ajustes. Vuelve a intentarlo." },
@@ -37,6 +49,10 @@ type Ajustes = {
   exigir_bono: boolean;
   revisar_altas: boolean;
   num_boxes: number;
+  precio_completo: number | null;
+  precio_semi: number | null;
+  precio_box: number | null;
+  instrucciones_pago: string | null;
 };
 type Pista = { id: string; nombre: string; activa: boolean };
 type Servicio = { id: string; nombre: string; descripcion: string | null; precio: number | null };
@@ -64,10 +80,12 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
     );
   }
 
-  const [{ data: h }, { data: pistas }, { data: servicios }] = await Promise.all([
+  const [{ data: h }, { data: pistas }, { data: servicios }, { data: tarifas }] = await Promise.all([
     supabase
       .from("hipicas")
-      .select("nombre, horas_minimas_anulacion, calendario_auto, semanas_auto, exigir_bono, revisar_altas, num_boxes")
+      .select(
+        "nombre, horas_minimas_anulacion, calendario_auto, semanas_auto, exigir_bono, revisar_altas, num_boxes, precio_completo, precio_semi, precio_box, instrucciones_pago",
+      )
       .eq("id", id)
       .single<Ajustes>(),
     supabase.from("pistas").select("id, nombre, activa").eq("hipica_id", id).order("orden").returns<Pista[]>(),
@@ -78,6 +96,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
       .eq("activo", true)
       .order("orden")
       .returns<Servicio[]>(),
+    supabase.from("tarifas_bonos").select("clases, precio").eq("hipica_id", id).order("clases").returns<{ clases: number; precio: number }[]>(),
   ]);
   if (!h) throw new Error("No se han podido cargar los ajustes");
 
@@ -202,6 +221,89 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
             Guardar ajustes
           </button>
         </form>
+      </Seccion>
+
+      <Seccion titulo="Tarifas y pagos" id="tarifas">
+        <div className="space-y-3">
+          <form action={guardarTarifas} className={`${tarjeta} space-y-4 p-4`}>
+            <input type="hidden" name="hipica_id" value={id} />
+            <p className="text-sm text-tinta-suave">Precio al mes de cada pupilaje. Se cobra solo al generar los recibos.</p>
+            <div className="grid grid-cols-3 gap-3">
+              {(
+                [
+                  ["precio_completo", "Completo", h.precio_completo],
+                  ["precio_semi", "Semipupilaje", h.precio_semi],
+                  ["precio_box", "Solo box", h.precio_box],
+                ] as const
+              ).map(([n, t, v]) => (
+                <div key={n} className="space-y-1.5">
+                  <label htmlFor={n} className={etiqueta}>
+                    {t} (€)
+                  </label>
+                  <input id={n} name={n} inputMode="decimal" defaultValue={v ?? ""} className={campo} />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="instrucciones_pago" className={etiqueta}>
+                Cómo te pagan
+              </label>
+              <textarea
+                id="instrucciones_pago"
+                name="instrucciones_pago"
+                rows={3}
+                maxLength={500}
+                defaultValue={h.instrucciones_pago ?? ""}
+                placeholder="Ej.: transferencia a ES12 3456… o Bizum al 600 000 000. Pon tu nombre y el nº de recibo."
+                className={campo}
+              />
+              <p className="text-sm text-tinta-suave">Lo ven las familias junto a su recibo y va en los recordatorios por WhatsApp.</p>
+            </div>
+            <button type="submit" className={`${boton} w-full`}>
+              Guardar tarifas
+            </button>
+          </form>
+
+          <div className={`${tarjeta} space-y-3 p-4`}>
+            <p className="font-bold">Precio de los bonos</p>
+            {(tarifas ?? []).length > 0 && (
+              <ul className="divide-y divide-linea">
+                {(tarifas ?? []).map((t) => (
+                  <li key={t.clases} className="flex items-center gap-3 py-2">
+                    <span className="flex-1">Bono de {t.clases} {t.clases === 1 ? "clase" : "clases"}</span>
+                    <span className="font-bold">{euros(t.precio)}</span>
+                    <form action={borrarTarifaBono}>
+                      <input type="hidden" name="hipica_id" value={id} />
+                      <input type="hidden" name="clases" value={t.clases} />
+                      <button type="submit" className={`${botonTexto} hover:text-alerta`} aria-label={`Quitar bono de ${t.clases}`}>
+                        Quitar
+                      </button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form action={guardarTarifaBono} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="hipica_id" value={id} />
+              <div className="w-24 space-y-1.5">
+                <label htmlFor="tb-clases" className={etiqueta}>
+                  Clases
+                </label>
+                <input id="tb-clases" name="clases" type="number" inputMode="numeric" min={1} max={100} required placeholder="8" className={campo} />
+              </div>
+              <div className="w-28 space-y-1.5">
+                <label htmlFor="tb-precio" className={etiqueta}>
+                  Precio (€)
+                </label>
+                <input id="tb-precio" name="precio" inputMode="decimal" required placeholder="120" className={campo} />
+              </div>
+              <button type="submit" className={botonSecundario}>
+                Guardar
+              </button>
+            </form>
+            <p className="text-sm text-tinta-suave">Al dar un bono a un alumno se le carga este precio (lo puedes cambiar en cada bono).</p>
+          </div>
+        </div>
       </Seccion>
 
       <Seccion titulo="Pistas" id="pistas">

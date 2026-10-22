@@ -30,3 +30,19 @@ export async function quitarJinete(formData: FormData) {
   if (error) console.error("quitar_jinete:", error.message);
   refresh();
 }
+
+// El titular guarda sus datos para la factura.
+export async function guardarDatosFactura(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  const miembroId = String(formData.get("miembro_id") ?? "");
+  const datos = String(formData.get("datos_factura") ?? "").trim();
+  if (!UUID.test(hipicaId) || !UUID.test(miembroId)) redirect("/");
+  if (datos.length > 300) redirect(`/hipica/${hipicaId}/familia?error=factura_error#factura`);
+  const supabase = await createClient();
+  const { error } = await supabase.from("miembros").update({ datos_factura: datos || null }).eq("id", miembroId).eq("hipica_id", hipicaId);
+  if (error) {
+    console.error("datos factura:", error.message);
+    redirect(`/hipica/${hipicaId}/familia?error=factura_error#factura`);
+  }
+  redirect(`/hipica/${hipicaId}/familia?ok=factura#factura`);
+}

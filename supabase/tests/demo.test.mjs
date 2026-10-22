@@ -78,6 +78,12 @@ check('el pienso está bajo mínimos', (await as(A, `select * from public.existe
 check('hay 2 altas por revisar', (await as(A, `select * from public.altas where estado = 'pendiente'`)).rows.length === 2);
 await as(A, `select public.revisar_alta(id, true) from public.altas where nombre = 'Andrés Molina'`);
 check('aprobar el alta de demo crea al propietario y su caballo', (await as(A, `select * from public.caballos where nombre = 'Canelo'`)).rows.length === 1);
+
+// Cobros (0010)
+const recs = (await as(A, `select estado from public.recibos`)).rows.map(r => r.estado);
+check('hay recibos del mes pasado pagados, pendientes y devueltos', ['pagado', 'pendiente', 'devuelto'].every(e => recs.includes(e)), JSON.stringify(recs));
+const mios2 = (await as(F, `select concepto, recibo_id from public.cargos`)).rows;
+check('la familia ve sus cargos de este mes pendientes de recibo', mios2.filter(c => !c.recibo_id).length >= 3, JSON.stringify(mios2));
 try { await as(A, `select public.borrar_mi_cuenta()`); check('la cuenta demo no se puede borrar', false); }
 catch (e) { check('la cuenta demo no se puede borrar', /demostración/.test(e.message), e.message); }
 try { await as(A, `select public.reset_demo()`); check('la app no puede lanzar reset_demo', false); }

@@ -69,7 +69,7 @@ export async function cargarContexto(hipicaId: string): Promise<Contexto> {
   };
 }
 
-export type Seccion = "inicio" | "horario" | "cuadra" | "caballos" | "gestion" | "familia" | "servicios" | null;
+export type Seccion = "inicio" | "horario" | "cuadra" | "caballos" | "cobros" | "gestion" | "familia" | "servicios" | null;
 
 export function navegacion(ctx: Pick<Contexto, "hipica" | "yo" | "misCaballos">, activa: Seccion): ItemNav[] {
   const base = `/hipica/${ctx.hipica.id}`;
@@ -85,7 +85,7 @@ export function navegacion(ctx: Pick<Contexto, "hipica" | "yo" | "misCaballos">,
       item("inicio", base, "Inicio", "inicio"),
       item("horario", `${base}/horario`, "Reservar", "calendario"),
       ...(ctx.misCaballos.length ? [item("servicios", `${base}/servicios`, "Servicios", "herradura")] : []),
-      item("familia", `${base}/familia`, "Familia", "personas"),
+      item("familia", `${base}/familia`, "Cuenta", "usuario"),
     ];
   }
   if (rol === "cuadra") {
@@ -97,7 +97,9 @@ export function navegacion(ctx: Pick<Contexto, "hipica" | "yo" | "misCaballos">,
     item("cuadra", `${base}/cuadra`, "Cuadra", "cuadra"),
     item("caballos", `${base}/caballos`, "Caballos", "herradura"),
   ];
-  if (rol === "admin") nav.push(item("gestion", `${base}/gestion`, "Gestión", "ajustes"));
+  if (rol === "admin") {
+    nav.push(item("cobros", `${base}/cobros`, "Cobros", "tarjeta"), item("gestion", `${base}/gestion`, "Gestión", "ajustes"));
+  }
   return nav;
 }
 
@@ -193,4 +195,44 @@ export const OFICIOS: Record<string, string> = {
   dentista: "Dentista equino",
   transporte: "Transporte",
   otro: "Otro",
+};
+
+/* ---------- Cobros ---------- */
+
+export const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+// "2026-10-01" → "octubre" (o "octubre de 2025" si no es este año).
+export const nombreMes = (mes: string, anioActual?: number) => {
+  const [a, m] = mes.split("-").map(Number);
+  return `${MESES[m - 1]}${anioActual && a !== anioActual ? ` de ${a}` : ""}`;
+};
+
+// Primer día del mes que está "n" meses antes o después de "AAAA-MM-01".
+export const mover = (mes: string, n: number) => {
+  const [a, m] = mes.split("-").map(Number);
+  const d = new Date(Date.UTC(a, m - 1 + n, 1));
+  return d.toISOString().slice(0, 10);
+};
+
+export const METODOS: Record<string, string> = {
+  transferencia: "Transferencia",
+  bizum: "Bizum",
+  efectivo: "Efectivo",
+  tarjeta: "Tarjeta",
+  domiciliacion: "Domiciliación",
+};
+
+export const ESTADOS_RECIBO: Record<string, { texto: string; tono: "ok" | "atencion" | "alerta" | "info" | "neutro" }> = {
+  pendiente: { texto: "Pendiente", tono: "info" },
+  pagado: { texto: "Pagado", tono: "ok" },
+  devuelto: { texto: "Devuelto", tono: "alerta" },
+};
+
+export const euro = (n: number | string) =>
+  `${Number(n).toLocaleString("es-ES", { minimumFractionDigits: Number(n) % 1 ? 2 : 0, maximumFractionDigits: 2 })} €`;
+
+// "600 200 001" → "34600200001" para enlaces de WhatsApp.
+export const telWhatsApp = (t: string) => {
+  const d = t.replace(/\D/g, "");
+  return d.length === 9 ? `34${d}` : d;
 };

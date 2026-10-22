@@ -18,7 +18,7 @@ import {
   etiqueta,
   tarjeta,
 } from "@/components/app/ui";
-import { cargarContexto, fechas, navegacion, NIVELES } from "@/lib/hipica";
+import { cargarContexto, euros, fechas, navegacion, NIVELES } from "@/lib/hipica";
 import { UUID } from "@/lib/rutas";
 import { resumenBono } from "@/lib/tipos";
 import { borrarBono, cambiarNivel, crearBono, darDeBaja, editarDatos } from "../actions";
@@ -27,12 +27,13 @@ type Miembro = {
   id: string;
   nombre: string;
   telefono: string | null;
+  datos_factura: string | null;
   nivel: string | null;
   rol: string;
   user_id: string | null;
   titular_id: string | null;
 };
-type Bono = { id: string; clases: number; caduca: string | null; nota: string | null; created_at: string };
+type Bono = { id: string; clases: number; caduca: string | null; nota: string | null; created_at: string; precio: number | null; cobrar: boolean };
 type Reserva = { id: string; bono_id: string | null; sesiones: { titulo: string; inicio: string; cancelada: boolean } };
 
 const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
@@ -68,7 +69,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
 
   const { data: m } = await supabase
     .from("miembros")
-    .select("id, nombre, telefono, nivel, rol, user_id, titular_id")
+    .select("id, nombre, telefono, datos_factura, nivel, rol, user_id, titular_id")
     .eq("id", miembroId)
     .eq("hipica_id", id)
     .eq("activo", true)
@@ -89,7 +90,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
       .returns<{ id: string; nombre: string; nivel: string | null }[]>(),
     supabase
       .from("bonos")
-      .select("id, clases, caduca, nota, created_at")
+      .select("id, clases, caduca, nota, created_at, precio, cobrar")
       .eq("miembro_id", m.id)
       .order("created_at", { ascending: false })
       .returns<Bono[]>(),
@@ -196,6 +197,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
                           {[
                             `Desde el ${fFecha.format(new Date(b.created_at))}`,
                             b.caduca ? `caduca el ${fFecha.format(new Date(b.caduca))}` : "sin caducidad",
+                            b.cobrar ? (b.precio ? euros(b.precio) : "sin precio") : "no se cobra",
                             b.nota,
                           ]
                             .filter(Boolean)
@@ -251,6 +253,18 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
                         <option value="12">En 1 año</option>
                       </select>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label htmlFor="precio" className={etiqueta}>
+                        Precio (€)
+                      </label>
+                      <input id="precio" name="precio" inputMode="decimal" placeholder="Según tarifa" className={campo} />
+                    </div>
+                    <label className="flex min-h-11 items-end gap-2 pb-2.5">
+                      <input type="checkbox" name="cobrar" value="si" defaultChecked className="size-5 accent-cuadra" />
+                      <span className="text-sm font-bold">Cobrarlo en su recibo</span>
+                    </label>
                   </div>
                   <div className="space-y-1.5">
                     <label htmlFor="nota" className={etiqueta}>
@@ -333,6 +347,14 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
                 <input id="d-telefono" name="telefono" type="tel" maxLength={30} defaultValue={m.telefono ?? ""} className={campo} />
               </div>
             </div>
+            {!m.titular_id && (
+              <div className="space-y-1.5">
+                <label htmlFor="d-factura" className={etiqueta}>
+                  Datos para la factura <span className="font-normal text-tinta-suave">(nombre fiscal, NIF y dirección)</span>
+                </label>
+                <textarea id="d-factura" name="datos_factura" rows={2} maxLength={300} defaultValue={m.datos_factura ?? ""} className={campo} />
+              </div>
+            )}
             <button type="submit" className={botonSecundario}>
               Guardar datos
             </button>

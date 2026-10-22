@@ -134,3 +134,61 @@ export async function serviciosTipicos(formData: FormData) {
   if (error) console.error("servicios típicos:", error.message);
   redirect(`/hipica/${hipicaId}/ajustes?ok=servicio#servicios`);
 }
+
+/* ---------- Tarifas y pagos ---------- */
+
+const precio = (formData: FormData, campo: string) => {
+  const t = String(formData.get(campo) ?? "").trim().replace(",", ".");
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 && n <= 100000 ? Math.round(n * 100) / 100 : NaN;
+};
+
+export async function guardarTarifas(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  if (!UUID.test(hipicaId)) redirect("/");
+  const completo = precio(formData, "precio_completo");
+  const semi = precio(formData, "precio_semi");
+  const box = precio(formData, "precio_box");
+  const instrucciones = String(formData.get("instrucciones_pago") ?? "").trim();
+  if ([completo, semi, box].some((n) => Number.isNaN(n)) || instrucciones.length > 500) {
+    redirect(`/hipica/${hipicaId}/ajustes?error=tarifas#tarifas`);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("hipicas")
+    .update({ precio_completo: completo, precio_semi: semi, precio_box: box, instrucciones_pago: instrucciones || null })
+    .eq("id", hipicaId);
+  if (error) {
+    console.error("guardar tarifas:", error.message);
+    redirect(`/hipica/${hipicaId}/ajustes?error=tarifas#tarifas`);
+  }
+  redirect(`/hipica/${hipicaId}/ajustes?ok=tarifas#tarifas`);
+}
+
+export async function guardarTarifaBono(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  if (!UUID.test(hipicaId)) redirect("/");
+  const clases = Number(formData.get("clases"));
+  const p = precio(formData, "precio");
+  if (!Number.isInteger(clases) || clases < 1 || clases > 100 || p === null || Number.isNaN(p)) {
+    redirect(`/hipica/${hipicaId}/ajustes?error=tarifas#tarifas`);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("tarifas_bonos").upsert({ hipica_id: hipicaId, clases, precio: p });
+  if (error) {
+    console.error("tarifa bono:", error.message);
+    redirect(`/hipica/${hipicaId}/ajustes?error=tarifas#tarifas`);
+  }
+  redirect(`/hipica/${hipicaId}/ajustes?ok=tarifas#tarifas`);
+}
+
+export async function borrarTarifaBono(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  const clases = Number(formData.get("clases"));
+  if (!UUID.test(hipicaId) || !Number.isInteger(clases)) redirect("/");
+  const supabase = await createClient();
+  const { error } = await supabase.from("tarifas_bonos").delete().eq("hipica_id", hipicaId).eq("clases", clases);
+  if (error) console.error("borrar tarifa bono:", error.message);
+  refresh();
+}

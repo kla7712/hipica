@@ -18,12 +18,15 @@ import {
 import { cargarContexto, fechas, navegacion } from "@/lib/hipica";
 import { resumenBono, type EstadoBono } from "@/lib/tipos";
 import { anadirJinete, quitarJinete } from "./actions";
+import { MisPagos } from "./mis-pagos";
 
 const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
   anadido: { tipo: "ok", texto: "Añadido. Ya puedes reservarle clases en Reservar." },
   nombre: { tipo: "error", texto: "Escribe el nombre." },
   maximo: { tipo: "error", texto: "Puedes tener hasta 6 jinetes a tu cargo." },
   anadir: { tipo: "error", texto: "No se ha podido añadir. Vuelve a intentarlo." },
+  factura: { tipo: "ok", texto: "Datos para la factura guardados." },
+  factura_error: { tipo: "error", texto: "No se han podido guardar los datos (máximo 300 caracteres)." },
 };
 
 export default function FamiliaPage({ params, searchParams }: PageProps<"/hipica/[id]/familia">) {
@@ -84,8 +87,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
       cabecera={
         <Cabecera
           antetitulo={hipica.nombre}
-          titulo={hijos.length ? "Tu familia" : "Tu ficha"}
-          detalle="Quién monta, su nivel y cómo va su bono."
+          titulo="Tu cuenta"
+          detalle="Tu familia, tus recibos y cómo pagar."
           demo={ctx.demo}
         />
       }
@@ -124,7 +127,9 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
         </form>
       </Seccion>
 
-      <Seccion titulo="Tu cuenta" id="cuenta">
+      <MisPagos ctx={ctx} />
+
+      <Seccion titulo="Acceso" id="cuenta">
         <Link href="/cuenta" className={`${tarjeta} flex items-center gap-3 px-4 py-4 hover:bg-white/70`}>
           <span className="min-w-0 flex-1">
             <span className="block font-bold">Mi cuenta</span>

@@ -191,6 +191,34 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
       tono: "atencion",
     });
   }
+  if (ctx.esAdmin) {
+    const { data: sinCobrar } = await supabase
+      .from("recibos")
+      .select("estado, total, mes")
+      .eq("hipica_id", hipica.id)
+      .neq("estado", "pagado")
+      .lt("mes", `${hoy.slice(0, 7)}-01`)
+      .returns<{ estado: string; total: number; mes: string }[]>();
+    const devueltos = (sinCobrar ?? []).filter((r) => r.estado === "devuelto");
+    const pendientes = (sinCobrar ?? []).filter((r) => r.estado === "pendiente");
+    const suma = (l: { total: number }[]) => l.reduce((n, r) => n + Number(r.total), 0).toLocaleString("es-ES");
+    if (devueltos.length) {
+      alertas.push({
+        titulo: devueltos.length === 1 ? "1 recibo devuelto" : `${devueltos.length} recibos devueltos`,
+        detalle: `${suma(devueltos)} € por cobrar`,
+        href: `${base}/cobros?mes=${devueltos[0].mes.slice(0, 7)}&f=devuelto`,
+        tono: "atencion",
+      });
+    }
+    if (pendientes.length) {
+      alertas.push({
+        titulo: pendientes.length === 1 ? "1 recibo sin pagar del mes pasado" : `${pendientes.length} recibos sin pagar de meses pasados`,
+        detalle: `${suma(pendientes)} € pendientes`,
+        href: `${base}/cobros?mes=${pendientes[0].mes.slice(0, 7)}&f=pendiente`,
+        tono: "info",
+      });
+    }
+  }
   for (const e of (almacen ?? []).filter((x) => Number(x.cantidad) < Number(x.minimo))) {
     const dias = e.consumo_dia ? Math.floor(Number(e.cantidad) / Number(e.consumo_dia)) : null;
     alertas.push({

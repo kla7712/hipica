@@ -104,12 +104,13 @@ export async function editarDatos(formData: FormData) {
   const [hipicaId, miembroId] = ids(formData, "hipica_id", "miembro_id");
   const nombre = String(formData.get("nombre") ?? "").trim();
   const telefono = String(formData.get("telefono") ?? "").trim();
-  if (nombre.length < 1 || nombre.length > 120 || telefono.length > 30) ficha(hipicaId, miembroId, "error=datos");
+  const factura = String(formData.get("datos_factura") ?? "").trim();
+  if (nombre.length < 1 || nombre.length > 120 || telefono.length > 30 || factura.length > 300) ficha(hipicaId, miembroId, "error=datos");
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("miembros")
-    .update({ nombre, telefono: telefono || null })
+    .update({ nombre, telefono: telefono || null, datos_factura: factura || null })
     .eq("id", miembroId)
     .eq("hipica_id", hipicaId);
   if (error) {
@@ -128,7 +129,17 @@ export async function crearBono(formData: FormData) {
   const clases = Number(formData.get("clases"));
   const meses = Number(formData.get("meses"));
   const nota = String(formData.get("nota") ?? "").trim();
-  if (!CLASES.includes(clases) || !MESES.includes(meses) || nota.length > 120) ficha(hipicaId, miembroId, "error=bono");
+  const cobrar = formData.get("cobrar") === "si";
+  const precioTexto = String(formData.get("precio") ?? "").trim().replace(",", ".");
+  const precio = precioTexto === "" ? null : Number(precioTexto);
+  if (
+    !CLASES.includes(clases) ||
+    !MESES.includes(meses) ||
+    nota.length > 120 ||
+    (precio !== null && (!Number.isFinite(precio) || precio < 0 || precio > 100000))
+  ) {
+    ficha(hipicaId, miembroId, "error=bono");
+  }
 
   let caduca: string | null = null;
   if (meses > 0) {
@@ -144,6 +155,8 @@ export async function crearBono(formData: FormData) {
     clases,
     caduca,
     nota: nota || null,
+    cobrar,
+    precio: cobrar ? precio : null,
   });
   if (error) {
     console.error("crear bono:", error.message);
