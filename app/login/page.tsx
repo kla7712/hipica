@@ -23,13 +23,13 @@ const googleActivo = () => process.env.LOGIN_GOOGLE === "si";
 // La parte fija se sirve al instante; lo que depende de la URL va dentro de <Suspense>.
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
-    <>
-      <header className="sobre-verde rounded-b-[2rem] bg-cuadra text-white">
-        <div className="mx-auto w-full max-w-md px-5 pb-9 pt-[max(2.5rem,env(safe-area-inset-top))] sm:pt-16">
+    <div className="flex flex-1 flex-col lg:grid lg:min-h-screen lg:grid-cols-2">
+      <header className="sobre-verde rounded-b-[2rem] bg-cuadra text-white lg:flex lg:items-center lg:rounded-none lg:rounded-r-[3rem]">
+        <div className="mx-auto w-full max-w-md px-5 pb-9 pt-[max(2.5rem,env(safe-area-inset-top))] sm:pt-16 lg:max-w-lg lg:py-16">
           <span aria-hidden="true" className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-alfalfa text-cuadra">
             <Icono nombre="herradura" className="size-7" />
           </span>
-          <h1 className="font-titulo text-[2.75rem] font-extrabold leading-[1] tracking-tight [font-stretch:85%]">
+          <h1 className="font-titulo text-[2.75rem] font-extrabold leading-[1] tracking-tight [font-stretch:85%] lg:text-6xl">
             Tu hípica, en el móvil
           </h1>
           <p className="mt-4 max-w-sm text-lg leading-snug text-cuadra-claro">
@@ -37,12 +37,12 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
           </p>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-md flex-1 px-4 pb-16 pt-7">
+      <main className="mx-auto w-full max-w-md flex-1 px-4 pb-16 pt-7 lg:flex lg:flex-col lg:justify-center lg:py-16">
         <Suspense>
           <Formulario searchParams={searchParams} />
         </Suspense>
       </main>
-    </>
+    </div>
   );
 }
 

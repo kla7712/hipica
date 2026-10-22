@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  Columna,
+  Columnas,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -125,7 +127,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
   const esAlumno = m.rol === "alumno";
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={nav}
       cabecera={
         <Cabecera
@@ -156,6 +158,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         </div>
       )}
 
+      <Columnas>
+        <Columna>
       {esAlumno && (
         <Seccion titulo="Nivel" id="s-nivel">
           <form action={cambiarNivel} className={`${tarjeta} flex flex-wrap items-end gap-3 p-4`}>
@@ -285,6 +289,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         </Seccion>
       )}
 
+        </Columna>
+        <Columna>
       {esAlumno && (
         <Seccion titulo="Próximas clases" id="s-clases">
           {proximas.length === 0 ? (
@@ -381,6 +387,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
           </details>
         </Seccion>
       )}
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

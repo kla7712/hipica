@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  Columna,
+  Columnas,
   Resumen,
   Aviso,
   Cabecera,
@@ -105,7 +107,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
   const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={nav}
       cabecera={
         <Cabecera antetitulo={hipica.nombre} titulo="Ajustes" demo={ctx.demo}>
@@ -137,6 +139,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
         </div>
       )}
 
+      <Columnas>
+        <Columna>
       <Seccion titulo="Clases" id="clases">
         <Link href={`/hipica/${id}/clases`} className={`${tarjeta} flex items-center gap-3 px-4 py-4 hover:bg-white/70`}>
           <span className="min-w-0 flex-1">
@@ -249,6 +253,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
         </form>
       </Seccion>
 
+        </Columna>
+        <Columna>
       <Seccion titulo="Tarifas y pagos" id="tarifas">
         <div className="space-y-3">
           <form action={guardarTarifas} className={`${tarjeta} space-y-4 p-4`}>
@@ -432,6 +438,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
           </details>
         </div>
       </Seccion>
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

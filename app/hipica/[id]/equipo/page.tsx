@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import {
+  Columna,
+  Columnas,
   Resumen,
   Aviso,
   Cabecera,
@@ -94,7 +96,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/equip
   const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={esAdmin ? nav : navegacion(ctx, null)}
       cabecera={<Cabecera volver={esAdmin ? volver : undefined} antetitulo={hipica.nombre} titulo="Equipo" demo={ctx.demo} />}
     >
@@ -104,6 +106,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/equip
         </div>
       )}
 
+      <Columnas>
+        <Columna>
       <Seccion titulo="Usan la app" id="equipo">
         <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
           {(equipo ?? []).map((m) => (
@@ -191,6 +195,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/equip
         </Seccion>
       )}
 
+        </Columna>
+        <Columna>
       <Seccion titulo="Profesionales" id="profesionales">
         {(profesionales ?? []).length === 0 ? (
           <Vacio>Apunta aquí al veterinario, al herrador… para tener su teléfono a mano.</Vacio>
@@ -265,6 +271,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/equip
           </details>
         )}
       </Seccion>
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  Columna,
+  Columnas,
   Resumen,
   Aviso,
   Cabecera,
@@ -118,8 +120,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
         ? [c.box && `Box ${c.box}`, c.propietario?.nombre ?? "Sin propietario", c.pupilaje && PUPILAJES[c.pupilaje]]
         : [c.box && `Box ${c.box}`, n === 0 ? "Sin clases hoy" : n === 1 ? "1 clase hoy" : `${n} clases hoy`];
     return (
-      <li key={c.id} className="px-4 py-3">
-        <Link href={`/hipica/${id}/caballos/${c.id}`} className="flex items-center gap-3">
+      <li key={c.id} className="px-4 py-3 xl:flex xl:items-center xl:gap-4">
+        <Link href={`/hipica/${id}/caballos/${c.id}`} className="flex items-center gap-3 xl:min-w-0 xl:flex-1">
           <Inicial nombre={c.nombre} tono={c.disponible ? "verde" : "neutro"} />
           <span className="min-w-0 flex-1">
             <span className="block font-bold">{c.nombre}</span>
@@ -132,7 +134,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
           ) : null}
           <Icono nombre="flecha" className="size-5 shrink-0 text-tinta-suave" />
         </Link>
-        <form action={moverCaballo} className="mt-2 flex items-center gap-2 pl-[3.25rem]">
+        <form action={moverCaballo} className="mt-2 flex items-center gap-2 pl-[3.25rem] xl:mt-0 xl:w-80 xl:shrink-0 xl:pl-0">
           <input type="hidden" name="hipica_id" value={id} />
           <input type="hidden" name="caballo_id" value={c.id} />
           <div className="min-w-0 flex-1">
@@ -151,7 +153,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
   };
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={nav}
       cabecera={
         <Cabecera antetitulo={hipica.nombre} titulo="Caballos" demo={ctx.demo}>
@@ -178,6 +180,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
         <Vacio>Aún no hay caballos. {esAdmin ? "Da de alta el primero más abajo." : "El administrador puede darlos de alta."}</Vacio>
       )}
 
+      <Columnas className="lg:grid-cols-[3fr_2fr]">
+        <Columna>
       {dePropietarios.length > 0 && (
         <Seccion titulo="De propietarios" id="propietarios">
           <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>{dePropietarios.map(fila)}</ul>
@@ -190,6 +194,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
         </Seccion>
       )}
 
+        </Columna>
+        <Columna>
       {numBoxes > 0 && (
         <Seccion
           titulo="Boxes"
@@ -200,7 +206,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
             </span>
           }
         >
-          <ul className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+          <ul className="grid grid-cols-4 gap-2 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: numBoxes }, (_, i) => {
               const n = String(i + 1);
               const c = lista.find((x) => x.box?.trim() === n);
@@ -235,6 +241,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
           </div>
         </details>
       )}
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

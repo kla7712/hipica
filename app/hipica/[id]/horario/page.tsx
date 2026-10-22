@@ -363,7 +363,7 @@ function ClaseAlumno({
         {s.tipo === "libre" && <p className="mt-2 text-sm text-tinta-suave">No gasta clases del bono.</p>}
 
         {!s.cancelada && (
-          <div className={`mt-3 grid gap-2 ${familia ? "" : "sm:flex sm:justify-end"}`}>
+          <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap sm:justify-end">
             {jinetes.map((j) => {
               const suya = s.mias.find((m) => m.miembro === j.id);
               const espera = s.esperas.find((e) => e.miembro === j.id);

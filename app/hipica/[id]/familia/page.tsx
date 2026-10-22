@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  Columna,
+  Columnas,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -82,7 +84,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
   };
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "familia")}
       cabecera={
         <Cabecera
@@ -99,6 +101,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
         </div>
       )}
 
+      <Columnas>
+        <Columna>
       <Seccion titulo="Jinetes" id="jinetes">
         <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
           {hijos.map((h) => fila(h, false))}
@@ -127,6 +131,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
         </form>
       </Seccion>
 
+        </Columna>
+        <Columna>
       <MisPagos ctx={ctx} />
 
       <Seccion titulo="Acceso" id="cuenta">
@@ -138,6 +144,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
           <Icono nombre="flecha" className="size-5 text-tinta-suave" />
         </Link>
       </Seccion>
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

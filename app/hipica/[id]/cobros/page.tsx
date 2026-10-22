@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  Columna,
+  Columnas,
   Resumen,
   Aviso,
   Cabecera,
@@ -109,7 +111,7 @@ async function Cobros({ ctx, q }: { ctx: Contexto; q: Record<string, string | st
   const error = typeof q.error === "string" && Object.hasOwn(ERRORES, q.error) ? ERRORES[q.error] : null;
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "cobros")}
       cabecera={
         <Cabecera antetitulo={hipica.nombre} titulo="Cobros" demo={ctx.demo}>
@@ -150,6 +152,8 @@ async function Cobros({ ctx, q }: { ctx: Contexto; q: Record<string, string | st
         </Cabecera>
       }
     >
+      <Columnas>
+        <Columna>
       <div className="space-y-3">
         {error && <Aviso tipo="error">{error}</Aviso>}
         {generados !== null && (
@@ -246,6 +250,8 @@ async function Cobros({ ctx, q }: { ctx: Contexto; q: Record<string, string | st
         </details>
       </Seccion>
 
+        </Columna>
+        <Columna>
       <Seccion titulo={`Recibos de ${nombre}`} id="recibos">
         {lista.length > 0 && (
           <div className="mb-3">
@@ -286,6 +292,8 @@ async function Cobros({ ctx, q }: { ctx: Contexto; q: Record<string, string | st
           </ul>
         )}
       </Seccion>
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

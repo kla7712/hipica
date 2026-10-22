@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  Columna,
+  Columnas,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -176,7 +178,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
     .join(" · ");
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "horario")}
       cabecera={
         <Cabecera
@@ -201,6 +203,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
         </div>
       )}
 
+      <Columnas className="lg:grid-cols-[3fr_2fr]">
+        <Columna>
       <Seccion titulo={conCaballos ? "Alumnos y caballos" : "Jinetes"} id="alumnos">
         {lista.length === 0 ? (
           <Vacio>Nadie ha reservado todavía.</Vacio>
@@ -312,6 +316,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
         )}
       </Seccion>
 
+        </Columna>
+        <Columna>
       {(enEspera.length > 0 || (libres === 0 && !empezada && !sesion.cancelada)) && (
         <Seccion titulo="Lista de espera" id="espera">
           {enEspera.length === 0 ? (
@@ -415,6 +421,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
           </div>
         </Seccion>
       )}
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

@@ -62,25 +62,45 @@ export function Icono({ nombre, className = "size-5" }: { nombre: NombreIcono; c
 
 export type ItemNav = { href: string; texto: string; icono: NombreIcono; activo: boolean };
 
-// Pantalla dentro de una hípica: cabecera verde, contenido y barra inferior.
+// Pantalla dentro de una hípica: cabecera verde, contenido y navegación.
+// En el móvil la navegación va abajo; en el ordenador (lg) es un menú lateral fijo
+// y la cabecera es una tarjeta verde. "amplio" deja usar todo el ancho (dos columnas, listas).
+const anchos = { normal: "lg:max-w-3xl", amplio: "lg:max-w-6xl" } as const;
+
 export function PantallaApp({
   cabecera,
   nav,
+  ancho = "normal",
   children,
 }: {
   cabecera: ReactNode;
   nav?: ItemNav[];
+  ancho?: keyof typeof anchos;
   children: ReactNode;
 }) {
+  const max = anchos[ancho];
   return (
-    <>
-      <header className="sobre-verde rounded-b-[1.75rem] bg-cuadra text-white">
-        <div className="mx-auto w-full max-w-2xl px-4 pb-5 pt-[max(0.5rem,env(safe-area-inset-top))]">{cabecera}</div>
+    <div className={`flex flex-1 flex-col lg:pr-8 ${nav ? "lg:pl-72" : "lg:pl-8"}`}>
+      <header className={`sobre-verde rounded-b-[1.75rem] bg-cuadra text-white lg:mx-auto lg:mt-6 lg:w-full lg:rounded-[1.75rem] ${max}`}>
+        <div className="mx-auto w-full max-w-2xl px-4 pb-5 pt-[max(0.5rem,env(safe-area-inset-top))] lg:max-w-none lg:px-8 lg:pb-7 lg:pt-3">
+          {cabecera}
+        </div>
       </header>
-      <main className={`mx-auto w-full max-w-2xl flex-1 px-4 pt-6 ${nav ? "pb-32" : "pb-16"}`}>{children}</main>
+      <main className={`mx-auto w-full max-w-2xl flex-1 px-4 pt-6 lg:px-0 lg:pt-8 ${max} ${nav ? "pb-32 lg:pb-16" : "pb-16"}`}>
+        {children}
+      </main>
       {nav && <BarraNav items={nav} />}
-    </>
+    </div>
   );
+}
+
+// Dos columnas en el ordenador; en el móvil, una debajo de otra.
+export function Columnas({ children, className = "lg:grid-cols-2" }: { children: ReactNode; className?: string }) {
+  return <div className={`mt-8 first:mt-0 lg:grid lg:items-start lg:gap-x-10 ${className}`}>{children}</div>;
+}
+
+export function Columna({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`mt-8 min-w-0 first:mt-0 lg:mt-0 ${className}`}>{children}</div>;
 }
 
 // Contenido de la cabecera: línea superior (hípica o "atrás" + cuenta), título y extras.
@@ -132,7 +152,7 @@ export function Cabecera({
       </div>
       <div>
         {volver && antetitulo && <p className="text-sm font-semibold text-cuadra-claro">{antetitulo}</p>}
-        <h1 className={`${titulo} text-[2.1rem] leading-[1.08] first-letter:uppercase`}>{texto}</h1>
+        <h1 className={`${titulo} text-[2.1rem] leading-[1.08] first-letter:uppercase lg:text-[2.6rem]`}>{texto}</h1>
         {detalle && <p className="mt-1.5 text-cuadra-claro">{detalle}</p>}
       </div>
       {children}
@@ -174,19 +194,30 @@ function BarraNav({ items }: { items: ItemNav[] }) {
   return (
     <nav
       aria-label="Secciones"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-linea bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-linea bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:inset-y-0 lg:right-auto lg:w-64 lg:border-r lg:border-t-0 lg:bg-white lg:pb-6"
     >
-      <ul className="mx-auto grid max-w-2xl" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+      <div className="hidden h-24 items-center gap-3 px-6 lg:flex">
+        <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-xl bg-cuadra text-alfalfa">
+          <Icono nombre="herradura" className="size-6" />
+        </span>
+        <span className="font-titulo text-lg font-bold leading-tight tracking-tight">Tu hípica</span>
+      </div>
+      <ul
+        className="mx-auto grid max-w-2xl lg:flex lg:max-w-none lg:flex-col lg:gap-1 lg:px-3"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
         {items.map((i) => (
           <li key={i.href}>
             <Link
               href={i.href}
               aria-current={i.activo ? "page" : undefined}
-              className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs ${
-                i.activo ? "font-extrabold text-tinta" : "font-semibold text-tinta-suave hover:text-tinta"
+              className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs lg:min-h-12 lg:flex-row lg:justify-start lg:gap-3 lg:rounded-xl lg:px-3 lg:text-[0.95rem] ${
+                i.activo
+                  ? "font-extrabold text-tinta lg:bg-alfalfa"
+                  : "font-semibold text-tinta-suave hover:text-tinta lg:hover:bg-limo"
               }`}
             >
-              <span className={`rounded-full px-4 py-1 transition-colors ${i.activo ? "bg-alfalfa" : ""}`}>
+              <span className={`rounded-full px-4 py-1 transition-colors lg:p-0 ${i.activo ? "bg-alfalfa" : ""}`}>
                 <Icono nombre={i.icono} className="size-[22px]" />
               </span>
               {i.texto}
@@ -225,15 +256,15 @@ export function Volver({ href, children }: { href: string; children: ReactNode }
 export function CargandoApp() {
   return (
     <>
-      <header className="rounded-b-[1.75rem] bg-cuadra">
-        <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-5 pt-[max(0.5rem,env(safe-area-inset-top))]">
+      <header className="rounded-b-[1.75rem] bg-cuadra lg:mx-auto lg:mt-6 lg:w-full lg:max-w-3xl lg:rounded-[1.75rem]">
+        <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-5 pt-[max(0.5rem,env(safe-area-inset-top))] lg:max-w-none lg:px-8">
           <div className="flex h-12 items-center">
             <div className="h-4 w-32 rounded bg-white/15" />
           </div>
           <div className="h-9 w-56 rounded-lg bg-white/20" />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-6">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-6 lg:max-w-3xl lg:px-0">
         <p className="text-tinta-suave" role="status">
           Cargando…
         </p>
@@ -485,7 +516,7 @@ export function CasillaFecha({ corto, numero }: { corto: string; numero: string 
 // Selector de dos o tres opciones sobre la cabecera verde (enlaces).
 export function Segmento({ opciones, label }: { opciones: { texto: string; href: string; activo: boolean }[]; label: string }) {
   return (
-    <nav aria-label={label} className="grid rounded-xl bg-white/10 p-1" style={{ gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))` }}>
+    <nav aria-label={label} className="grid rounded-xl bg-white/10 p-1 lg:max-w-lg" style={{ gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))` }}>
       {opciones.map((o) => (
         <Link
           key={o.texto}

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import {
+  Columna,
+  Columnas,
   Aviso,
   Cabecera,
   CasillaFecha,
@@ -70,7 +72,7 @@ export async function Inicio({ ctx, aviso }: { ctx: Contexto; aviso?: string | s
   const quien = (nombre: string) => (nombre === ctx.yo.nombre ? (familia ? `${nombrePila(nombre)} (tú)` : null) : nombrePila(nombre));
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "inicio")}
       cabecera={<Cabecera antetitulo={hipica.nombre} titulo={`Hola, ${nombrePila(ctx.yo.nombre)}`} demo={ctx.demo} />}
     >
@@ -90,6 +92,8 @@ export async function Inicio({ ctx, aviso }: { ctx: Contexto; aviso?: string | s
         )}
       </div>
 
+      <Columnas>
+        <Columna className="lg:col-start-2 lg:row-start-1">
       <MisCaballos ctx={ctx} />
 
       {conBono.length > 0 && (
@@ -114,6 +118,8 @@ export async function Inicio({ ctx, aviso }: { ctx: Contexto; aviso?: string | s
         </Seccion>
       )}
 
+        </Columna>
+        <Columna className="lg:col-start-1 lg:row-start-1">
       <Seccion titulo={familia ? "Próximas clases" : "Tus próximas clases"} id="proximas">
         {filas.length === 0 ? (
           <Vacio>No tienes clases reservadas en los próximos {DIAS} días.</Vacio>
@@ -187,6 +193,8 @@ export async function Inicio({ ctx, aviso }: { ctx: Contexto; aviso?: string | s
       </Seccion>
 
       <Tablon ctx={ctx} volver={base} />
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

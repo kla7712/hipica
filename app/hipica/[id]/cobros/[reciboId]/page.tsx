@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import {
+  Columna,
+  Columnas,
   Cabecera,
   CargandoApp,
   Chip,
@@ -67,7 +69,7 @@ async function Contenido({ params }: Pick<PageProps<"/hipica/[id]/cobros/[recibo
   );
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "cobros")}
       cabecera={
         <Cabecera
@@ -82,6 +84,8 @@ async function Contenido({ params }: Pick<PageProps<"/hipica/[id]/cobros/[recibo
         </Cabecera>
       }
     >
+      <Columnas>
+        <Columna>
       <Seccion titulo="Conceptos" id="conceptos">
         <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
           {r.cargos.map((c) => (
@@ -106,6 +110,8 @@ async function Contenido({ params }: Pick<PageProps<"/hipica/[id]/cobros/[recibo
         </ul>
       </Seccion>
 
+        </Columna>
+        <Columna>
       <Seccion titulo="Cobro" id="cobro">
         <div className={`${tarjeta} space-y-4 p-4`}>
           {r.estado === "pagado" ? (
@@ -174,6 +180,8 @@ async function Contenido({ params }: Pick<PageProps<"/hipica/[id]/cobros/[recibo
           {r.cliente?.datos_factura ?? "No los ha rellenado. Puede hacerlo él desde su cuenta o tú desde su ficha."}
         </p>
       </Seccion>
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

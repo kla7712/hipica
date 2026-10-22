@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  Columna,
+  Columnas,
   Resumen,
   Aviso,
   Cabecera,
@@ -164,7 +166,7 @@ async function Cuadra({
   const url = (t: string) => `${base}/cuadra?turno=${t}`;
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "cuadra")}
       cabecera={
         <Cabecera antetitulo={capitalizar(f.largo(ahora))} titulo="Cuadra" demo={ctx.demo}>
@@ -185,6 +187,8 @@ async function Cuadra({
         </div>
       )}
 
+      <Columnas>
+        <Columna>
       <Seccion titulo="Tareas" id="tareas">
         {delTurno.length === 0 ? (
           <Vacio>No hay tareas para este turno. Añade la primera más abajo.</Vacio>
@@ -330,6 +334,8 @@ async function Cuadra({
         )}
       </Seccion>
 
+        </Columna>
+        <Columna>
       {((cuidados ?? []).length > 0 || (solicitudes ?? []).length > 0) && (
         <Seccion titulo="También hoy" id="tambien">
           <div className="space-y-3">
@@ -425,6 +431,8 @@ async function Cuadra({
         )}
       </Seccion>
 
+        </Columna>
+      </Columnas>
       <p className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm">
         <Link href={`${base}/caballos`} className="font-bold text-cuadra underline">
           Dónde está cada caballo

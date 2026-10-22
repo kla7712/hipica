@@ -4,6 +4,8 @@ import {
   Cabecera,
   CargandoApp,
   Chip,
+  Columna,
+  Columnas,
   PantallaApp,
   Seccion,
   Vacio,
@@ -80,13 +82,16 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
   if (error) throw new Error(error.message);
 
   const aviso = textoAviso(query);
-  const porDia = DIAS.map((nombre, i) => ({
+  // Los 7 días: en el móvil solo se ven los que tienen clases; en el ordenador, la semana entera.
+  const semana = DIAS.map((nombre, i) => ({
     nombre,
     clases: (clases ?? []).filter((c) => c.dia_semana === i + 1),
-  })).filter((d) => d.clases.length > 0);
+  }));
+  const porDia = semana.filter((d) => d.clases.length > 0);
 
   return (
     <PantallaApp
+      ancho="amplio"
       nav={nav}
       cabecera={<Cabecera volver={volver} antetitulo={hipica.nombre} titulo="Horario semanal" detalle="Las clases que se repiten cada semana." />}
     >
@@ -97,12 +102,18 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
       )}
 
       {porDia.length === 0 && <Vacio>Aún no hay clases. Crea la primera con el formulario de abajo.</Vacio>}
-      {porDia.map((dia) => (
-        <Seccion key={dia.nombre} titulo={dia.nombre}>
+      {porDia.length > 0 && (
+        <div className="space-y-8 lg:grid lg:grid-cols-4 lg:gap-3 lg:space-y-0 xl:grid-cols-7">
+          {semana.map((dia) => (
+            <div key={dia.nombre} className={`min-w-0 ${dia.clases.length === 0 ? "hidden lg:block" : ""}`}>
+              <Seccion titulo={dia.nombre}>
+                {dia.clases.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-tinta-suave/30 p-3 text-sm text-tinta-suave">Sin clases</p>
+                ) : (
           <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
             {dia.clases.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4">
-                <p className={`w-14 shrink-0 font-extrabold tabular-nums ${c.activa ? "" : "text-tinta-suave/60"}`}>
+              <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4 lg:flex-col lg:items-stretch lg:gap-1.5 lg:p-3">
+                <p className={`cifra w-14 shrink-0 text-2xl leading-none ${c.activa ? "" : "text-tinta-suave/60"}`}>
                   {c.hora_inicio.slice(0, 5)}
                 </p>
                 <div className="min-w-0 flex-1">
@@ -125,15 +136,22 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
                   <input type="hidden" name="hipica_id" value={id} />
                   <input type="hidden" name="clase_id" value={c.id} />
                   <input type="hidden" name="activa" value={String(!c.activa)} />
-                  <button type="submit" className={`${botonSecundario} px-3 text-sm`}>
+                  <button type="submit" className={`${botonSecundario} px-3 text-sm lg:w-full`}>
                     {c.activa ? "Pausar" : "Reactivar"}
                   </button>
                 </form>
               </li>
             ))}
           </ul>
-        </Seccion>
-      ))}
+                )}
+              </Seccion>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Columnas>
+        <Columna>
 
       {porDia.length > 0 && (
         <Seccion titulo="Publicar el calendario" id="publicar">
@@ -162,6 +180,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
         </Seccion>
       )}
 
+        </Columna>
+        <Columna>
       <Seccion titulo="Nueva clase" id="nueva">
         <form action={crearClase} className={`${tarjeta} grid gap-4 p-4 sm:grid-cols-2`}>
           <input type="hidden" name="hipica_id" value={id} />
@@ -250,6 +270,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
           </div>
         </form>
       </Seccion>
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

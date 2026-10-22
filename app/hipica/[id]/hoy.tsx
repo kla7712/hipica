@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
+  Columna,
+  Columnas,
   Aviso,
   Barra,
   Cabecera,
@@ -261,7 +263,7 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
   const mensaje = textoAviso(aviso);
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "inicio")}
       cabecera={
         <Cabecera antetitulo={hipica.nombre} titulo={f.largo(ahora)} demo={ctx.demo}>
@@ -277,6 +279,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
     >
       {mensaje && <Aviso tipo="error">{mensaje}</Aviso>}
 
+      <Columnas>
+        <Columna>
       {alertas.length > 0 && (
         <Seccion titulo="Necesita atención" id="atencion">
           <div className={`${tarjeta} overflow-hidden`}>
@@ -313,6 +317,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         </Seccion>
       )}
 
+        </Columna>
+        <Columna>
       <Seccion
         titulo="Clases de hoy"
         id="hoy"
@@ -349,6 +355,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
       </Seccion>
 
       <Tablon ctx={ctx} volver={base} />
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

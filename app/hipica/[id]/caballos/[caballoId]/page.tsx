@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  Columna,
+  Columnas,
   Resumen,
   Aviso,
   Cabecera,
@@ -116,7 +118,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
   const desde = f.clave(c.ubicacion_desde) === hoy ? `desde las ${f.hora(c.ubicacion_desde)}` : `desde el ${f.medio(c.ubicacion_desde)}`;
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={navegacion(ctx, esStaff ? "caballos" : "inicio")}
       cabecera={
         <Cabecera
@@ -142,6 +144,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
         </div>
       )}
 
+      <Columnas>
+        <Columna>
       {esStaff && (
         <Seccion titulo="Dónde está" id="donde">
           <form action={moverCaballo} className={`${tarjeta} space-y-2 p-4`}>
@@ -233,6 +237,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
         )}
       </Seccion>
 
+        </Columna>
+        <Columna>
       {(c.dieta || c.notas) && (
         <Seccion titulo="Dieta y notas" id="dieta">
           <div className={`${tarjeta} space-y-2 p-4`}>
@@ -323,6 +329,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
           Pedir un servicio para {c.nombre}
         </Link>
       )}
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }

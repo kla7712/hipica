@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { headers } from "next/headers";
 import {
+  Columna,
+  Columnas,
   Resumen,
   Aviso,
   Cabecera,
@@ -92,7 +94,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
   const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
 
   return (
-    <PantallaApp
+    <PantallaApp ancho="amplio"
       nav={nav}
       cabecera={
         <Cabecera antetitulo={hipica.nombre} titulo="Alumnos" demo={ctx.demo}>
@@ -119,6 +121,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         </div>
       )}
 
+      <Columnas className="lg:grid-cols-[3fr_2fr]">
+        <Columna>
       <Seccion titulo="Alumnos" id="alumnos">
         <div className="mb-3">
           <Filtros
@@ -163,6 +167,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         )}
       </Seccion>
 
+        </Columna>
+        <Columna>
       <Seccion titulo="Invitar alumnos" id="invitar">
         <div className={`${tarjeta} space-y-4 p-4`}>
           <p className="text-sm text-tinta-suave">
@@ -245,6 +251,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         </form>
       </details>
 
+        </Columna>
+      </Columnas>
     </PantallaApp>
   );
 }
