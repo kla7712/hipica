@@ -12,9 +12,9 @@ import {
   Inicial,
   PantallaApp,
   Seccion,
+  Segmento,
   Vacio,
   boton,
-  botonSecundario,
   botonTexto,
   campo,
   etiqueta,
@@ -22,9 +22,8 @@ import {
 } from "@/components/app/ui";
 import { cargarContexto, fechas, navegacion } from "@/lib/hipica";
 import { resumenBono, type EstadoBono } from "@/lib/tipos";
-import { anadirSinCuenta, borrarInvitacion, crearInvitacion, darDeBaja } from "./actions";
+import { anadirSinCuenta, borrarInvitacion, crearInvitacion } from "./actions";
 
-type Persona = { id: string; nombre: string; rol: string; telefono: string | null; user_id: string | null };
 type Invitacion = { id: string; rol: string; token: string; usos: number; usos_max: number | null; expira_en: string };
 
 const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
@@ -47,7 +46,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
   const { f: filtroQ, ok, error: codigoError } = await searchParams;
   const ctx = await cargarContexto(id);
   const { supabase, hipica } = ctx;
-  const nav = navegacion(ctx, "miembros");
+  const nav = navegacion(ctx, "horario");
   const base = `/hipica/${id}`;
 
   if (!ctx.esAdmin) {
@@ -59,21 +58,13 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
   }
 
   const ahora = new Date();
-  const [{ data: estado }, { data: equipo }, { data: invitaciones }] = await Promise.all([
+  const [{ data: estado }, { data: invitaciones }] = await Promise.all([
     supabase.rpc("estado_bonos", { p_hipica: id }),
-    supabase
-      .from("miembros")
-      .select("id, nombre, rol, telefono, user_id")
-      .eq("hipica_id", id)
-      .eq("activo", true)
-      .in("rol", ["admin", "monitor"])
-      .order("rol")
-      .order("nombre")
-      .returns<Persona[]>(),
     supabase
       .from("invitaciones")
       .select("id, rol, token, usos, usos_max, expira_en")
       .eq("hipica_id", id)
+      .eq("rol", "alumno")
       .gt("expira_en", ahora.toISOString())
       .order("created_at", { ascending: false })
       .returns<Invitacion[]>(),
@@ -104,6 +95,13 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
       nav={nav}
       cabecera={
         <Cabecera antetitulo={hipica.nombre} titulo="Alumnos" demo={ctx.demo}>
+          <Segmento
+            label="Ver"
+            opciones={[
+              { texto: "Horario", href: `${base}/horario`, activo: false },
+              { texto: "Alumnos", href: `${base}/miembros`, activo: true },
+            ]}
+          />
           <Cifras
             items={[
               { valor: jinetes.length, texto: "alumnos", href: `${base}/miembros` },
@@ -178,13 +176,6 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
                 Crear enlace para alumnos
               </button>
             </form>
-            <form action={crearInvitacion}>
-              <input type="hidden" name="hipica_id" value={id} />
-              <input type="hidden" name="rol" value="monitor" />
-              <button type="submit" className={botonSecundario}>
-                Invitar a un monitor
-              </button>
-            </form>
           </div>
           {activas.map((inv) => {
             const url = `${enlaceBase}/unirse/${inv.token}`;
@@ -252,38 +243,6 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         </form>
       </Seccion>
 
-      <Seccion titulo="Equipo" id="equipo">
-        <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
-          {(equipo ?? []).map((m) => (
-            <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-              <Inicial nombre={m.nombre} tono="verde" />
-              <span className="min-w-0 flex-1">
-                <span className="block font-bold">
-                  {m.nombre}
-                  {m.user_id === ctx.userId && " (tú)"}
-                </span>
-                <span className="block text-sm text-tinta-suave">
-                  {m.rol === "admin" ? "Administrador" : "Monitor"}
-                  {m.telefono && ` · ${m.telefono}`}
-                </span>
-              </span>
-              {m.rol === "monitor" && (
-                <details className="text-sm">
-                  <summary className={`${botonTexto} cursor-pointer list-none hover:text-alerta`}>Dar de baja</summary>
-                  <form action={darDeBaja} className="mt-2 space-y-2 rounded-xl bg-alerta-suave p-3">
-                    <input type="hidden" name="hipica_id" value={id} />
-                    <input type="hidden" name="miembro_id" value={m.id} />
-                    <p className="text-alerta">{m.nombre} dejará de ver la hípica.</p>
-                    <button type="submit" className="inline-flex min-h-11 items-center rounded-xl bg-alerta px-4 font-bold text-white">
-                      Confirmar baja
-                    </button>
-                  </form>
-                </details>
-              )}
-            </li>
-          ))}
-        </ul>
-      </Seccion>
     </PantallaApp>
   );
 }

@@ -56,7 +56,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
   const nav = navegacion(ctx, "caballos");
 
   // Un propietario va directo a la ficha de su caballo.
-  if (!ctx.esStaff) {
+  if (!ctx.esEquipo) {
     if (ctx.misCaballos.length) redirect(`/hipica/${id}/caballos/${ctx.misCaballos[0].id}`);
     return (
       <PantallaApp nav={nav} cabecera={<Cabecera antetitulo={hipica.nombre} titulo="Caballos" />}>
@@ -66,7 +66,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
   }
 
   const ahora = new Date();
-  const [{ data: caballos }, { data: usos }, { data: titulares }] = await Promise.all([
+  const [{ data: caballos }, { data: usos }, { data: titulares }, { data: datosHipica }] = await Promise.all([
     supabase
       .from("caballos")
       .select("id, nombre, tipo, disponible, max_clases_dia, box, pupilaje, ubicacion, ubicacion_desde, propietario:miembros(nombre)")
@@ -94,7 +94,9 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
           .order("nombre")
           .returns<{ id: string; nombre: string }[]>()
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
+    supabase.from("hipicas").select("num_boxes").eq("id", id).single<{ num_boxes: number }>(),
   ]);
+  const numBoxes = datosHipica?.num_boxes ?? 0;
 
   const hoy = f.clave(ahora);
   const clasesHoy = new Map<string, number>();
@@ -184,6 +186,43 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
       {deEscuela.length > 0 && (
         <Seccion titulo="De la escuela" id="escuela">
           <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>{deEscuela.map(fila)}</ul>
+        </Seccion>
+      )}
+
+      {numBoxes > 0 && (
+        <Seccion
+          titulo="Boxes"
+          id="boxes"
+          accion={
+            <span className="text-sm text-tinta-suave">
+              {Array.from({ length: numBoxes }, (_, i) => String(i + 1)).filter((b) => !lista.some((c) => c.box?.trim() === b)).length} libres
+            </span>
+          }
+        >
+          <ul className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+            {Array.from({ length: numBoxes }, (_, i) => {
+              const n = String(i + 1);
+              const c = lista.find((x) => x.box?.trim() === n);
+              return (
+                <li key={n}>
+                  {c ? (
+                    <Link
+                      href={`/hipica/${id}/caballos/${c.id}`}
+                      className="flex h-16 flex-col items-center justify-center rounded-xl bg-white px-1 text-center hover:ring-1 hover:ring-linea"
+                    >
+                      <span className="text-xs font-bold text-tinta-suave">{n}</span>
+                      <span className="w-full truncate text-sm font-bold">{c.nombre}</span>
+                    </Link>
+                  ) : (
+                    <span className="flex h-16 flex-col items-center justify-center rounded-xl border border-dashed border-linea text-center">
+                      <span className="text-xs font-bold text-tinta-suave">{n}</span>
+                      <span className="text-sm text-tinta-suave">Libre</span>
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </Seccion>
       )}
 

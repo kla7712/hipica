@@ -16,8 +16,18 @@ export async function guardarAjustes(formData: FormData) {
   const auto = formData.get("calendario_auto") === "si";
   const semanas = Number(formData.get("semanas"));
   const exigirBono = formData.get("exigir_bono") === "si";
+  const revisarAltas = formData.get("revisar_altas") === "si";
+  const boxes = Number(formData.get("num_boxes") || 0);
 
-  if (nombre.length < 2 || nombre.length > 120 || !PLAZOS.includes(horas) || !(semanas >= 1 && semanas <= 8)) {
+  if (
+    nombre.length < 2 ||
+    nombre.length > 120 ||
+    !PLAZOS.includes(horas) ||
+    !(semanas >= 1 && semanas <= 8) ||
+    !Number.isInteger(boxes) ||
+    boxes < 0 ||
+    boxes > 300
+  ) {
     redirect(`/hipica/${hipicaId}/ajustes?error=datos`);
   }
 
@@ -30,6 +40,8 @@ export async function guardarAjustes(formData: FormData) {
       calendario_auto: auto,
       semanas_auto: semanas,
       exigir_bono: exigirBono,
+      revisar_altas: revisarAltas,
+      num_boxes: boxes,
     })
     .eq("id", hipicaId);
   if (error) {

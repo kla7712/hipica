@@ -29,7 +29,15 @@ const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
   "error-pista": { tipo: "error", texto: "No se ha podido añadir la pista. Revisa el nombre." },
 };
 
-type Ajustes = { nombre: string; horas_minimas_anulacion: number; calendario_auto: boolean; semanas_auto: number; exigir_bono: boolean };
+type Ajustes = {
+  nombre: string;
+  horas_minimas_anulacion: number;
+  calendario_auto: boolean;
+  semanas_auto: number;
+  exigir_bono: boolean;
+  revisar_altas: boolean;
+  num_boxes: number;
+};
 type Pista = { id: string; nombre: string; activa: boolean };
 type Servicio = { id: string; nombre: string; descripcion: string | null; precio: number | null };
 
@@ -46,7 +54,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
   const { ok, error } = await searchParams;
   const ctx = await cargarContexto(id);
   const { supabase, hipica } = ctx;
-  const nav = navegacion(ctx, "ajustes");
+  const nav = navegacion(ctx, "gestion");
 
   if (!ctx.esAdmin) {
     return (
@@ -59,7 +67,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
   const [{ data: h }, { data: pistas }, { data: servicios }] = await Promise.all([
     supabase
       .from("hipicas")
-      .select("nombre, horas_minimas_anulacion, calendario_auto, semanas_auto, exigir_bono")
+      .select("nombre, horas_minimas_anulacion, calendario_auto, semanas_auto, exigir_bono, revisar_altas, num_boxes")
       .eq("id", id)
       .single<Ajustes>(),
     supabase.from("pistas").select("id, nombre, activa").eq("hipica_id", id).order("orden").returns<Pista[]>(),
@@ -130,6 +138,34 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
               </span>
             </span>
           </label>
+
+          <label className="flex items-start gap-3">
+            <input type="checkbox" name="revisar_altas" value="si" defaultChecked={h.revisar_altas} className="mt-1 size-5 accent-cuadra" />
+            <span>
+              <span className="font-bold">Revisar las altas antes de aceptarlas</span>
+              <span className="block text-sm text-tinta-suave">
+                Quien use el enlace de alumnos rellena sus datos y espera a que lo apruebes en Gestión. Si no lo marcas,
+                entra directamente.
+              </span>
+            </span>
+          </label>
+
+          <div className="space-y-1.5">
+            <label htmlFor="num_boxes" className={etiqueta}>
+              Número de boxes
+            </label>
+            <input
+              id="num_boxes"
+              name="num_boxes"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={300}
+              defaultValue={h.num_boxes}
+              className={campo}
+            />
+            <p className="text-sm text-tinta-suave">Para ver en Caballos cuáles están libres. Numéralos del 1 en adelante.</p>
+          </div>
 
           <fieldset className="space-y-3">
             <legend className="sr-only">Calendario</legend>

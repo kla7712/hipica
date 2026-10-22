@@ -62,7 +62,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
   const { supabase, hipica, esAdmin } = ctx;
   const base = `/hipica/${id}`;
   const f = fechas(hipica.zona_horaria);
-  const nav = navegacion(ctx, esAdmin ? "miembros" : "horario");
+  const nav = navegacion(ctx, esAdmin ? "gestion" : "horario");
 
   if (!ctx.esStaff) notFound();
 

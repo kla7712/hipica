@@ -24,6 +24,7 @@ const trazos = {
   inicio: "M4 11 12 4l8 7v9H4zM10 20v-5h4v5",
   calendario: "M4.5 4.5h15a1.5 1.5 0 0 1 1.5 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19V6a1.5 1.5 0 0 1 1.5-1.5zM3 9.5h18M8 2.5v4M16 2.5v4",
   herradura: "M7 20c-2-2-3-5-3-8a8 8 0 0 1 16 0c0 3-1 6-3 8M5 15h2.5M16.5 15H19M4.5 10.5H7M17 10.5h2.5",
+  cuadra: "M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zM9 21v-6h6v6",
   personas: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.5-3.5 3.2-5.5 6.5-5.5s6 2 6.5 5.5M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.8c2 .7 3.2 2.5 3.5 5.2",
   ajustes: "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4",
   usuario: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c.6-4 3.8-6.5 8-6.5s7.4 2.5 8 6.5",
@@ -439,5 +440,44 @@ export function CasillaFecha({ corto, numero }: { corto: string; numero: string 
       <span className="text-[0.65rem] font-bold uppercase text-tinta-suave">{corto}</span>
       <span className={`${titulo} text-xl leading-none`}>{numero}</span>
     </span>
+  );
+}
+
+// Selector de dos o tres opciones sobre la cabecera verde (enlaces).
+export function Segmento({ opciones, label }: { opciones: { texto: string; href: string; activo: boolean }[]; label: string }) {
+  return (
+    <nav aria-label={label} className="grid rounded-xl bg-white/10 p-1" style={{ gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))` }}>
+      {opciones.map((o) => (
+        <Link
+          key={o.texto}
+          href={o.href}
+          scroll={false}
+          aria-current={o.activo ? "page" : undefined}
+          className={`flex min-h-10 items-center justify-center rounded-lg text-sm font-bold ${
+            o.activo ? "bg-white text-cuadra" : "text-cuadra-claro hover:text-white"
+          }`}
+        >
+          {o.texto}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+// Barra de progreso sobre la cabecera verde.
+export function Progreso({ hechas, total, texto }: { hechas: number; total: number; texto: string }) {
+  const pct = total ? Math.round((hechas / total) * 100) : 0;
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm font-semibold text-cuadra-claro">
+        <span>{texto}</span>
+        <span className="tabular-nums">
+          {hechas} de {total} hechas
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={texto}>
+        <div className="h-full rounded-full bg-alfalfa" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }

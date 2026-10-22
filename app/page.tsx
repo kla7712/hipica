@@ -34,7 +34,44 @@ async function ListaHipicas() {
 
   if (error) throw new Error(error.message);
   const hipicas = data.filter((m) => m.hipicas);
-  if (hipicas.length === 0) redirect("/nueva-hipica");
+  if (hipicas.length === 0) {
+    // ¿Ha pedido el alta en alguna hípica y está esperando?
+    const { data: altas } = await supabase
+      .from("altas")
+      .select("estado, created_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .returns<{ estado: string; created_at: string }[]>();
+    const alta = altas?.[0];
+    if (alta && alta.estado !== "aprobada") {
+      return (
+        <PantallaApp cabecera={<Cabecera titulo={alta.estado === "pendiente" ? "Solicitud enviada" : "Alta no aprobada"} />}>
+          <div className={`${tarjeta} space-y-3 p-5`}>
+            {alta.estado === "pendiente" ? (
+              <>
+                <p className="text-lg font-bold">¡Gracias! La hípica está revisando tu alta.</p>
+                <p className="text-tinta-suave">
+                  Cuando la apruebe, entra aquí con tu email y podrás reservar clases. No hace falta que hagas nada más.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-bold">La hípica no ha aprobado tu alta.</p>
+                <p className="text-tinta-suave">Habla con ellos para saber por qué o para volver a intentarlo.</p>
+              </>
+            )}
+          </div>
+          <p className="mt-6 text-sm text-tinta-suave">
+            ¿Tienes tu propia hípica?{" "}
+            <Link href="/nueva-hipica" className="font-bold text-cuadra underline">
+              Créala aquí
+            </Link>
+          </p>
+        </PantallaApp>
+      );
+    }
+    redirect("/nueva-hipica");
+  }
   if (hipicas.length === 1) redirect(`/hipica/${hipicas[0].hipicas!.id}`);
 
   return (

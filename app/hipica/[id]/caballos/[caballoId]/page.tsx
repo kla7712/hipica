@@ -53,7 +53,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
   const { ok, error: codigoError } = await searchParams;
   if (!UUID.test(caballoId)) notFound();
   const ctx = await cargarContexto(id);
-  const { supabase, hipica, esAdmin, esStaff } = ctx;
+  const { supabase, hipica, esAdmin, esEquipo: esStaff } = ctx;
   const f = fechas(hipica.zona_horaria);
   const base = `/hipica/${id}`;
   const aqui = `${base}/caballos/${caballoId}`;
@@ -256,7 +256,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
           {(solicitudes ?? []).length === 0 ? (
             <Vacio>Aún no se ha pedido ningún servicio.</Vacio>
           ) : (
-            <ListaSolicitudes solicitudes={solicitudes ?? []} hipicaId={id} volver={aqui} modo={esStaff ? "equipo" : "propietario"} />
+            <ListaSolicitudes solicitudes={solicitudes ?? []} hipicaId={id} volver={aqui} modo={esStaff ? "equipo" : "propietario"} puedeAceptar={ctx.esStaff} />
           )}
         </Seccion>
       )}

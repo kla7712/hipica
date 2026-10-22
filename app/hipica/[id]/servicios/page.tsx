@@ -31,7 +31,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/servi
   const codigo = typeof q.ok === "string" ? q.ok : typeof q.error === "string" ? `error-${q.error}` : null;
   const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
   const aviso = textoAviso(q.aviso);
-  return ctx.esStaff ? (
+  return ctx.esEquipo ? (
     <Equipo ctx={ctx} aviso={aviso} />
   ) : (
     <Propietario ctx={ctx} caballoId={typeof q.caballo === "string" ? q.caballo : undefined} mensaje={mensaje} aviso={aviso} />
@@ -161,12 +161,18 @@ async function Equipo({ ctx, aviso }: { ctx: Contexto; aviso: string | null }) {
   const pendientes = lista.filter((s) => s.estado === "pendiente");
   const aceptadas = lista.filter((s) => s.estado === "aceptada");
   const resto = lista.filter((s) => s.estado === "hecha" || s.estado === "rechazada").reverse();
-  const props = { hipicaId: hipica.id, volver: `${base}/servicios`, modo: "equipo" as const, nombreCaballo: (id: string) => nombres.get(id) ?? null };
+  const props = {
+    hipicaId: hipica.id,
+    volver: `${base}/servicios`,
+    modo: "equipo" as const,
+    puedeAceptar: ctx.esStaff,
+    nombreCaballo: (id: string) => nombres.get(id) ?? null,
+  };
 
   return (
     <PantallaApp
-      nav={navegacion(ctx, "inicio")}
-      cabecera={<Cabecera volver={{ href: base, texto: "Hoy" }} titulo="Servicios pedidos" detalle="Lo que piden los propietarios" />}
+      nav={navegacion(ctx, ctx.yo.rol === "cuadra" ? "cuadra" : "inicio")}
+      cabecera={<Cabecera volver={ctx.yo.rol === "cuadra" ? { href: `${base}/cuadra`, texto: "Cuadra" } : { href: base, texto: "Hoy" }} titulo="Servicios pedidos" detalle="Lo que piden los propietarios" />}
     >
       {aviso && (
         <div className="mb-5">

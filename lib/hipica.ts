@@ -6,7 +6,7 @@ import { esCuentaDemo } from "@/lib/demo";
 import { UUID } from "@/lib/rutas";
 import type { ItemNav } from "@/components/app/ui";
 
-export type Rol = "admin" | "monitor" | "alumno";
+export type Rol = "admin" | "monitor" | "cuadra" | "alumno";
 
 export type Hipica = {
   id: string;
@@ -23,7 +23,8 @@ export type Contexto = {
   yo: { id: string; nombre: string; rol: Rol };
   hipica: Hipica;
   esAdmin: boolean;
-  esStaff: boolean;
+  esStaff: boolean; // admin o monitor
+  esEquipo: boolean; // admin, monitor o cuadra
   // Caballos de los que soy propietario (yo o alguien a mi cargo). Vacío para el equipo.
   misCaballos: { id: string; nombre: string }[];
 };
@@ -45,7 +46,8 @@ export async function cargarContexto(hipicaId: string): Promise<Contexto> {
   if (!yo?.hipicas) notFound();
 
   const esStaff = yo.rol === "admin" || yo.rol === "monitor";
-  const { data: caballos } = esStaff
+  const esEquipo = esStaff || yo.rol === "cuadra";
+  const { data: caballos } = esEquipo
     ? { data: [] }
     : await supabase
         .from("caballos")
@@ -62,11 +64,12 @@ export async function cargarContexto(hipicaId: string): Promise<Contexto> {
     hipica: yo.hipicas,
     esAdmin: yo.rol === "admin",
     esStaff,
+    esEquipo,
     misCaballos: caballos ?? [],
   };
 }
 
-export type Seccion = "inicio" | "horario" | "caballos" | "miembros" | "ajustes" | "familia" | "servicios" | null;
+export type Seccion = "inicio" | "horario" | "cuadra" | "caballos" | "gestion" | "familia" | "servicios" | null;
 
 export function navegacion(ctx: Pick<Contexto, "hipica" | "yo" | "misCaballos">, activa: Seccion): ItemNav[] {
   const base = `/hipica/${ctx.hipica.id}`;
@@ -85,14 +88,16 @@ export function navegacion(ctx: Pick<Contexto, "hipica" | "yo" | "misCaballos">,
       item("familia", `${base}/familia`, "Familia", "personas"),
     ];
   }
+  if (rol === "cuadra") {
+    return [item("cuadra", `${base}/cuadra`, "Cuadra", "cuadra"), item("caballos", `${base}/caballos`, "Caballos", "herradura")];
+  }
   const nav = [
     item("inicio", base, "Hoy", "inicio"),
     item("horario", `${base}/horario`, "Clases", "calendario"),
+    item("cuadra", `${base}/cuadra`, "Cuadra", "cuadra"),
     item("caballos", `${base}/caballos`, "Caballos", "herradura"),
   ];
-  if (rol === "admin") {
-    nav.push(item("miembros", `${base}/miembros`, "Alumnos", "personas"), item("ajustes", `${base}/ajustes`, "Ajustes", "ajustes"));
-  }
+  if (rol === "admin") nav.push(item("gestion", `${base}/gestion`, "Gestión", "ajustes"));
   return nav;
 }
 
@@ -173,3 +178,19 @@ export function cuandoToca(fecha: string, hoy: string): { texto: string; tono: "
 
 export const euros = (n: number | string | null) =>
   n === null ? "Según tarifa" : Number(n) === 0 ? "Incluido" : `${Number(n).toLocaleString("es-ES", { maximumFractionDigits: 2 })} €`;
+
+export const ROLES: Record<Rol, string> = {
+  admin: "Administrador",
+  monitor: "Monitor",
+  cuadra: "Cuadra",
+  alumno: "Alumno",
+};
+
+export const OFICIOS: Record<string, string> = {
+  veterinario: "Veterinario/a",
+  herrador: "Herrador",
+  fisioterapeuta: "Fisioterapeuta",
+  dentista: "Dentista equino",
+  transporte: "Transporte",
+  otro: "Otro",
+};

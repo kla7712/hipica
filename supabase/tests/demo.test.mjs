@@ -71,6 +71,13 @@ check('Trueno tiene cuidados pendientes', (await as(F, `select * from public.cui
 check('hay una solicitud pendiente para la hípica', (await as(A, `select * from public.solicitudes where estado = 'pendiente'`)).rows.length === 1);
 check('la familia no ve la solicitud de otro propietario', (await as(F, `select * from public.solicitudes where estado = 'pendiente'`)).rows.length === 0);
 check('hay 8 servicios', (await as(F, `select * from public.servicios`)).rows.length === 8);
+
+// Cuadra (0009)
+check('hay tareas de cuadra', (await as(A, `select * from public.tareas`)).rows.length === 8);
+check('el pienso está bajo mínimos', (await as(A, `select * from public.existencias where cantidad < minimo`)).rows.length === 1);
+check('hay 2 altas por revisar', (await as(A, `select * from public.altas where estado = 'pendiente'`)).rows.length === 2);
+await as(A, `select public.revisar_alta(id, true) from public.altas where nombre = 'Andrés Molina'`);
+check('aprobar el alta de demo crea al propietario y su caballo', (await as(A, `select * from public.caballos where nombre = 'Canelo'`)).rows.length === 1);
 try { await as(A, `select public.borrar_mi_cuenta()`); check('la cuenta demo no se puede borrar', false); }
 catch (e) { check('la cuenta demo no se puede borrar', /demostración/.test(e.message), e.message); }
 try { await as(A, `select public.reset_demo()`); check('la app no puede lanzar reset_demo', false); }

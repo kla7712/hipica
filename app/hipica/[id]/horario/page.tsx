@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   Aviso,
@@ -10,6 +11,7 @@ import {
   Filtros,
   Hora,
   PantallaApp,
+  Segmento,
   Vacio,
   boton,
   botonSecundario,
@@ -41,6 +43,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/horar
   const { id } = await params;
   const q = await searchParams;
   const ctx = await cargarContexto(id);
+  if (ctx.yo.rol === "cuadra") redirect(`/hipica/${id}/cuadra`);
   return <Horario ctx={ctx} dia={q.dia} tipo={q.tipo} para={q.para} aviso={q.aviso} />;
 }
 
@@ -126,6 +129,15 @@ async function Horario({
     const ocupadas = semana.reduce((n, s) => n + Math.min(s.ocupadas, s.plazas), 0);
     cabecera = (
       <Cabecera antetitulo="Próximos 7 días" titulo="Clases" demo={ctx.demo}>
+        {ctx.esAdmin && (
+          <Segmento
+            label="Ver"
+            opciones={[
+              { texto: "Horario", href: `${base}/horario`, activo: true },
+              { texto: "Alumnos", href: `${base}/miembros`, activo: false },
+            ]}
+          />
+        )}
         <Cifras
           items={[
             { valor: semana.length, texto: "clases" },

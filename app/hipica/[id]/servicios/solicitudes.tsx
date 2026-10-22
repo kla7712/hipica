@@ -29,12 +29,14 @@ export function ListaSolicitudes({
   hipicaId,
   volver,
   modo,
+  puedeAceptar = true,
   nombreCaballo,
 }: {
   solicitudes: Solicitud[];
   hipicaId: string;
   volver: string;
   modo: "equipo" | "propietario";
+  puedeAceptar?: boolean;
   nombreCaballo?: (caballoId: string) => string | null;
 }) {
   return (
@@ -72,7 +74,7 @@ export function ListaSolicitudes({
             </div>
             {s.nota && <p className="rounded-xl bg-limo px-3 py-2 text-sm">{s.nota}</p>}
 
-            {modo === "equipo" && s.estado === "pendiente" && (
+            {modo === "equipo" && puedeAceptar && s.estado === "pendiente" && (
               <div className="flex gap-2">
                 {boton1("aceptada", "Aceptar", true)}
                 {boton1("rechazada", "Rechazar")}

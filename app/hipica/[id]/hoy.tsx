@@ -170,6 +170,36 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
     };
   });
   alertas.push(...cuidadosAlertas);
+
+  // Altas por revisar y almacén bajo mínimos.
+  const [{ count: altas }, { data: almacen }] = await Promise.all([
+    ctx.esAdmin
+      ? supabase.from("altas").select("id", { count: "exact", head: true }).eq("hipica_id", hipica.id).eq("estado", "pendiente")
+      : Promise.resolve({ count: 0 }),
+    supabase
+      .from("existencias")
+      .select("nombre, unidad, cantidad, minimo, consumo_dia, pedido_en")
+      .eq("hipica_id", hipica.id)
+      .is("pedido_en", null)
+      .returns<{ nombre: string; unidad: string; cantidad: number; minimo: number; consumo_dia: number | null }[]>(),
+  ]);
+  if (altas) {
+    alertas.push({
+      titulo: altas === 1 ? "1 alta por revisar" : `${altas} altas por revisar`,
+      detalle: "Familias que se han apuntado desde la app",
+      href: `${base}/gestion#altas`,
+      tono: "atencion",
+    });
+  }
+  for (const e of (almacen ?? []).filter((x) => Number(x.cantidad) < Number(x.minimo))) {
+    const dias = e.consumo_dia ? Math.floor(Number(e.cantidad) / Number(e.consumo_dia)) : null;
+    alertas.push({
+      titulo: `${e.nombre} bajo mínimos`,
+      detalle: `Quedan ${Number(e.cantidad).toLocaleString("es-ES")} ${e.unidad}${dias !== null ? ` · unos ${dias} días` : ""}`,
+      href: `${base}/cuadra#almacen`,
+      tono: "atencion",
+    });
+  }
   alertas.sort((a, b) => (a.tono === b.tono ? 0 : a.tono === "atencion" ? -1 : 1));
   const nombreCaballo = new Map((caballos ?? []).map((c) => [c.id, c.nombre]));
 
