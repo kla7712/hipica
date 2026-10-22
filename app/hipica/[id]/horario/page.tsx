@@ -10,6 +10,7 @@ import {
   Dias,
   Filtros,
   Hora,
+  Meta,
   PantallaApp,
   Segmento,
   Vacio,
@@ -227,7 +228,7 @@ async function Horario({
         )}
       </div>
 
-      <h2 className="mb-3 mt-6 text-lg font-extrabold first-letter:uppercase">{f.largo(fechaElegida)}</h2>
+      <h2 className="mb-3 mt-7 font-titulo text-xl font-bold tracking-tight first-letter:uppercase">{f.largo(fechaElegida)}</h2>
 
       {delDia.length === 0 ? (
         <Vacio>{filtro === "todas" ? "No hay clases este día." : "No hay nada de este tipo este día."}</Vacio>
@@ -239,6 +240,7 @@ async function Horario({
               s={s}
               href={`${base}/sesion/${s.id}`}
               hora={f.hora(s.inicio)}
+              fin={f.hora(s.fin)}
               ahora={ahora}
               extra={
                 faltan.get(s.id) && !s.cancelada && new Date(s.fin) > ahora ? (
@@ -259,6 +261,7 @@ async function Horario({
               key={s.id}
               s={s}
               hora={f.hora(s.inicio)}
+              fin={f.hora(s.fin)}
               jinetes={elegida ? [elegida] : []}
               familia={esFamilia}
               hipicaId={hipica.id}
@@ -286,12 +289,10 @@ async function Horario({
   );
 }
 
-const botonFamilia =
-  "inline-flex min-h-11 items-center justify-center rounded-xl border border-cuadra/60 bg-white px-4 py-2.5 font-bold text-cuadra transition-colors hover:bg-alfalfa-suave";
-
 function ClaseAlumno({
   s,
   hora,
+  fin,
   jinetes,
   familia,
   hipicaId,
@@ -302,6 +303,7 @@ function ClaseAlumno({
 }: {
   s: SesionHorario;
   hora: string;
+  fin: string;
   jinetes: Jinete[];
   familia: boolean;
   hipicaId: string;
@@ -333,14 +335,19 @@ function ClaseAlumno({
 
   return (
     <li className="flex gap-3">
-      <Hora inicio={hora} apagada={s.cancelada} />
+      <Hora inicio={hora} fin={fin} apagada={s.cancelada} />
       <div className={`${tarjeta} min-w-0 flex-1 p-4 ${mias && !s.cancelada ? "ring-2 ring-alfalfa" : ""}`}>
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
           <div className="min-w-0 flex-1 basis-36">
             <p className={`font-extrabold ${s.cancelada ? "text-tinta-suave line-through" : ""}`}>{s.titulo}</p>
-            <p className="text-sm text-tinta-suave">
-              {[s.pista, s.monitor && `con ${nombrePila(s.monitor)}`, s.nivel].filter(Boolean).join(" · ")}
-            </p>
+            <Meta
+              className="mt-1"
+              items={[
+                { icono: "pista", texto: s.pista },
+                { icono: "usuario", texto: s.monitor && `con ${nombrePila(s.monitor)}` },
+                { texto: s.nivel },
+              ]}
+            />
           </div>
           {estado}
         </div>
@@ -395,7 +402,7 @@ function ClaseAlumno({
                 return (
                   <form key={j.id} action={reservar}>
                     {ocultos({ sesion_id: s.id, miembro_id: j.id })}
-                    <button type="submit" className={`${familia ? botonFamilia : boton} w-full sm:min-w-36`}>
+                    <button type="submit" className={`${boton} w-full sm:min-w-36`}>
                       Reservar{para(j)}
                     </button>
                   </form>

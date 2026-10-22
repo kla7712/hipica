@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import {
+  Resumen,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -221,8 +222,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/equip
           </ul>
         )}
         {esAdmin && (
-          <details className={`${tarjeta} mt-3 p-4`}>
-            <summary className="flex min-h-11 cursor-pointer list-none items-center font-bold text-cuadra">+ Añadir un profesional</summary>
+          <details className={`${tarjeta} mt-3 p-4 group`}>
+            <Resumen>Añadir un profesional</Resumen>
             <form action={crearProfesional} className="mt-3 space-y-3">
               <input type="hidden" name="hipica_id" value={id} />
               <div className="grid gap-3 sm:grid-cols-2">

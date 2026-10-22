@@ -44,7 +44,7 @@ export function FormAlta({ token, revisar }: { token: string; revisar: boolean }
       <input type="hidden" name="caballo" value={datosCaballo ? JSON.stringify(datosCaballo) : ""} />
 
       <fieldset className="min-w-0 space-y-3">
-        <legend className="mb-3 text-lg font-extrabold">Tus datos</legend>
+        <legend className="mb-3 font-titulo text-xl font-bold tracking-tight">Tus datos</legend>
         <div className="space-y-1.5">
           <label htmlFor="nombre" className={etiqueta}>
             Nombre y apellidos
@@ -69,7 +69,7 @@ export function FormAlta({ token, revisar }: { token: string; revisar: boolean }
       </fieldset>
 
       <fieldset className="min-w-0 space-y-3">
-        <legend className="mb-3 text-lg font-extrabold">¿Quién va a montar?</legend>
+        <legend className="mb-3 font-titulo text-xl font-bold tracking-tight">¿Quién va a montar?</legend>
         <label className="flex min-h-12 items-center gap-3 rounded-2xl bg-white px-4">
           <input type="checkbox" checked={yoMonto} onChange={(e) => setYoMonto(e.target.checked)} className="size-5 accent-cuadra" />
           <span className="font-bold">Yo</span>
@@ -159,7 +159,7 @@ export function FormAlta({ token, revisar }: { token: string; revisar: boolean }
       </fieldset>
 
       <fieldset className="min-w-0 space-y-3">
-        <legend className="mb-3 text-lg font-extrabold">¿Traes tu caballo?</legend>
+        <legend className="mb-3 font-titulo text-xl font-bold tracking-tight">¿Traes tu caballo?</legend>
         <label className="flex min-h-12 items-center gap-3 rounded-2xl bg-white px-4">
           <input type="checkbox" checked={conCaballo} onChange={(e) => setConCaballo(e.target.checked)} className="size-5 accent-cuadra" />
           <span className="font-bold">Sí, quiero dejarlo en pupilaje</span>

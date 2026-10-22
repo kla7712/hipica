@@ -10,6 +10,8 @@ import {
   Filtros,
   Hora,
   Icono,
+  Meta,
+  type NombreIcono,
   PantallaApp,
   Seccion,
   Vacio,
@@ -21,7 +23,7 @@ import { textoAviso } from "@/lib/avisos";
 import { Tablon } from "./tablon";
 import { ListaSolicitudes, type Solicitud } from "./servicios/solicitudes";
 
-type Alerta = { titulo: string; detalle: string; href: string; tono: "atencion" | "info" };
+type Alerta = { titulo: string; detalle: string; href: string; tono: "atencion" | "info"; icono: NombreIcono; orden: number };
 type Caballo = { id: string; nombre: string; disponible: boolean; max_clases_dia: number };
 
 // Pantalla "Hoy" del equipo (admin y monitores).
@@ -97,6 +99,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         detalle: `${cuando(s)}${s.pista ? ` · ${s.pista}` : ""} · ${faltan === 1 ? "falta 1" : `faltan ${faltan}`}`,
         href: `${base}/sesion/${s.id}`,
         tono: "info",
+        icono: "herradura",
+        orden: 4,
       });
     }
   }
@@ -116,6 +120,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         detalle: `Pero tiene ${usos === 1 ? "1 clase" : `${usos} clases`} hoy. Cámbialo por otro caballo.`,
         href: `${base}/caballos`,
         tono: "atencion",
+        icono: "herradura",
+        orden: 1,
       });
     } else if (usos > c.max_clases_dia) {
       alertas.push({
@@ -123,6 +129,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         detalle: `Su máximo es de ${c.max_clases_dia} al día`,
         href: `${base}/caballos`,
         tono: "atencion",
+        icono: "herradura",
+        orden: 1,
       });
     }
   }
@@ -134,6 +142,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         detalle: `${cuando(s)} · ${s.en_espera} en lista de espera`,
         href: `${base}/sesion/${s.id}`,
         tono: "info",
+        icono: "calendario",
+        orden: 7,
       });
     }
   }
@@ -149,6 +159,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         .join(", ")}${renovar.length > 3 ? "…" : ""}`,
       href: `${base}/miembros?f=renovar`,
       tono: "atencion",
+      icono: "personas",
+      orden: 8,
     });
   }
   // Cuidados de la próxima semana (herrador, vacunas…), primero los vencidos.
@@ -167,6 +179,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
       detalle: `${t.texto}${respuesta}`,
       href: `${base}/caballos/${c.caballo_id}`,
       tono: t.dias <= 1 ? "atencion" : "info",
+      icono: "herradura",
+      orden: t.dias <= 1 ? 6 : 10,
     };
   });
   alertas.push(...cuidadosAlertas);
@@ -189,6 +203,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
       detalle: "Familias que se han apuntado desde la app",
       href: `${base}/gestion#altas`,
       tono: "atencion",
+      icono: "personas",
+      orden: 5,
     });
   }
   if (ctx.esAdmin) {
@@ -208,6 +224,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         detalle: `${suma(devueltos)} € por cobrar`,
         href: `${base}/cobros?mes=${devueltos[0].mes.slice(0, 7)}&f=devuelto`,
         tono: "atencion",
+        icono: "euro",
+        orden: 2,
       });
     }
     if (pendientes.length) {
@@ -216,6 +234,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         detalle: `${suma(pendientes)} € pendientes`,
         href: `${base}/cobros?mes=${pendientes[0].mes.slice(0, 7)}&f=pendiente`,
         tono: "info",
+        icono: "euro",
+        orden: 9,
       });
     }
   }
@@ -226,9 +246,11 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
       detalle: `Quedan ${Number(e.cantidad).toLocaleString("es-ES")} ${e.unidad}${dias !== null ? ` · unos ${dias} días` : ""}`,
       href: `${base}/cuadra#almacen`,
       tono: "atencion",
+      icono: "saco",
+      orden: 3,
     });
   }
-  alertas.sort((a, b) => (a.tono === b.tono ? 0 : a.tono === "atencion" ? -1 : 1));
+  alertas.sort((a, b) => a.orden - b.orden);
   const nombreCaballo = new Map((caballos ?? []).map((c) => [c.id, c.nombre]));
 
   /* ---------- Clases de hoy, filtrables por pista ---------- */
@@ -257,23 +279,17 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
 
       {alertas.length > 0 && (
         <Seccion titulo="Necesita atención" id="atencion">
-          <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
-            {alertas.map((a, i) => (
-              <li key={i}>
-                <Link href={a.href} className="flex items-center gap-3 px-4 py-3.5 hover:bg-limo">
-                  <span
-                    aria-hidden="true"
-                    className={`size-2.5 shrink-0 rounded-full ${a.tono === "atencion" ? "bg-punto-atencion" : "bg-punto-info"}`}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-bold">{a.titulo}</span>
-                    <span className="block text-sm text-tinta-suave">{a.detalle}</span>
-                  </span>
-                  <Icono nombre="flecha" className="size-5 shrink-0 text-tinta-suave" />
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className={`${tarjeta} overflow-hidden`}>
+            <ul className="divide-y divide-linea">{alertas.slice(0, 5).map(filaAlerta)}</ul>
+            {alertas.length > 5 && (
+              <details className="group border-t border-linea">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-center text-sm font-bold text-cuadra hover:bg-limo group-open:hidden">
+                  Ver {alertas.length - 5} {alertas.length - 5 === 1 ? "aviso más" : "avisos más"}
+                </summary>
+                <ul className="divide-y divide-linea">{alertas.slice(5).map(filaAlerta)}</ul>
+              </details>
+            )}
+          </div>
         </Seccion>
       )}
 
@@ -326,7 +342,7 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
         ) : (
           <ul className="space-y-2.5">
             {lista.map((s) => (
-              <FilaClase key={s.id} s={s} href={`${base}/sesion/${s.id}`} hora={f.hora(s.inicio)} ahora={ahora} />
+              <FilaClase key={s.id} s={s} href={`${base}/sesion/${s.id}`} hora={f.hora(s.inicio)} fin={f.hora(s.fin)} ahora={ahora} />
             ))}
           </ul>
         )}
@@ -337,17 +353,41 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
   );
 }
 
+function filaAlerta(a: Alerta, i: number) {
+  return (
+    <li key={i}>
+      <Link href={a.href} className="flex items-center gap-3 px-4 py-3 hover:bg-limo">
+        <span
+          aria-hidden="true"
+          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
+            a.tono === "atencion" ? "bg-atencion-suave text-atencion" : "bg-info-suave text-info"
+          }`}
+        >
+          <Icono nombre={a.icono} className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold leading-snug">{a.titulo}</span>
+          <span className="block text-sm text-tinta-suave">{a.detalle}</span>
+        </span>
+        <Icono nombre="flecha" className="size-5 shrink-0 text-tinta-suave" />
+      </Link>
+    </li>
+  );
+}
+
 // Una clase en la lista del equipo: enlace a su lista de alumnos.
 export function FilaClase({
   s,
   href,
   hora,
+  fin,
   ahora,
   extra,
 }: {
   s: SesionHorario;
   href: string;
   hora: string;
+  fin?: string;
   ahora: Date;
   extra?: ReactNode;
 }) {
@@ -355,16 +395,21 @@ export function FilaClase({
   const apagada = terminada || s.cancelada;
   return (
     <li className="flex gap-3">
-      <Hora inicio={hora} apagada={apagada} />
-      <Link href={href} className={`${tarjeta} block min-w-0 flex-1 p-4 hover:ring-1 hover:ring-linea`}>
+      <Hora inicio={hora} fin={fin} apagada={apagada} />
+      <Link href={href} className={`${tarjeta} block min-w-0 flex-1 p-4 transition-colors hover:border-tinta-suave/40`}>
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
           <div className="min-w-0 flex-1 basis-36">
             <p className={`font-extrabold ${s.cancelada ? "text-tinta-suave line-through" : apagada ? "text-tinta-suave" : ""}`}>
               {s.titulo}
             </p>
-            <p className="text-sm text-tinta-suave">
-              {[s.pista, s.monitor, s.tipo === "grupo" ? s.nivel : null].filter(Boolean).join(" · ") || "Sin pista"}
-            </p>
+            <Meta
+              className="mt-1"
+              items={[
+                { icono: "pista", texto: s.pista ?? "Sin pista" },
+                { icono: "usuario", texto: s.monitor },
+                { texto: s.tipo === "grupo" ? s.nivel : null },
+              ]}
+            />
           </div>
           {terminada && !s.cancelada ? (
             <Chip>Terminada</Chip>

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  Resumen,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -219,7 +220,7 @@ async function Cuadra({
                             : [t.detalle, t.responsable && nombrePila(t.responsable.nombre)].filter(Boolean).join(" · ")}
                         </span>
                       </span>
-                      {t.hora && <span className="shrink-0 text-sm font-extrabold tabular-nums">{t.hora.slice(0, 5)}</span>}
+                      {t.hora && <span className="cifra shrink-0 text-xl leading-none">{t.hora.slice(0, 5)}</span>}
                     </button>
                   </form>
                 </li>
@@ -228,8 +229,8 @@ async function Cuadra({
           </ul>
         )}
 
-        <details className={`${tarjeta} mt-3 p-4`}>
-          <summary className="flex min-h-11 cursor-pointer list-none items-center font-bold text-cuadra">+ Añadir una tarea</summary>
+        <details className={`${tarjeta} mt-3 p-4 group`}>
+          <Resumen>Añadir una tarea</Resumen>
           <form action={crearTarea} className="mt-3 space-y-3">
             <input type="hidden" name="hipica_id" value={hipica.id} />
             <input type="hidden" name="hoy" value={hoy} />
@@ -368,8 +369,8 @@ async function Cuadra({
           </ul>
         )}
         {esAdmin && (
-          <details className={`${tarjeta} mt-3 p-4`}>
-            <summary className="flex min-h-11 cursor-pointer list-none items-center font-bold text-cuadra">+ Añadir un producto</summary>
+          <details className={`${tarjeta} mt-3 p-4 group`}>
+            <Resumen>Añadir un producto</Resumen>
             <form action={crearExistencia} className="mt-3 space-y-3">
               <input type="hidden" name="hipica_id" value={hipica.id} />
               <div className="grid grid-cols-2 gap-3">

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  Resumen,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -190,8 +191,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
           </p>
         )}
         {esStaff && (
-          <details className={`${tarjeta} mt-3 p-4`}>
-            <summary className="flex min-h-11 cursor-pointer list-none items-center font-bold text-cuadra">+ Programar un cuidado</summary>
+          <details className={`${tarjeta} mt-3 p-4 group`}>
+            <Resumen>Programar un cuidado</Resumen>
             <form action={crearCuidado} className="mt-3 space-y-3">
               <input type="hidden" name="hipica_id" value={id} />
               <input type="hidden" name="caballo_id" value={c.id} />

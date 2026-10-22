@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { headers } from "next/headers";
 import {
+  Resumen,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -217,8 +218,9 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
         </div>
       </Seccion>
 
-      <Seccion titulo="Alumno sin cuenta" id="sincuenta">
-        <form action={anadirSinCuenta} className={`${tarjeta} space-y-3 p-4`}>
+      <details id="sincuenta" className="group mt-8" open={codigo === "error-sincuenta"}>
+        <Resumen>Añadir un alumno sin cuenta</Resumen>
+        <form action={anadirSinCuenta} className={`${tarjeta} mt-3 space-y-3 p-4`}>
           <input type="hidden" name="hipica_id" value={id} />
           <p className="text-sm text-tinta-suave">
             Para quien reserva por teléfono o no usa el móvil. Tú le apuntas a las clases y le pones el bono.
@@ -241,7 +243,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
             Añadir alumno
           </button>
         </form>
-      </Seccion>
+      </details>
 
     </PantallaApp>
   );

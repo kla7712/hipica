@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  Resumen,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -18,7 +19,6 @@ import {
   campo,
   etiqueta,
   tarjeta,
-  titulo,
 } from "@/components/app/ui";
 import { cargarContexto, ESTADOS_RECIBO, euro, fechas, mover, navegacion, nombreMes, type Contexto } from "@/lib/hipica";
 import { crearCargo, generarRecibos, quitarCargo } from "./actions";
@@ -120,21 +120,33 @@ async function Cobros({ ctx, q }: { ctx: Contexto; q: Record<string, string | st
               return { texto: nombreMes(m).replace(/^./, (c) => c.toUpperCase()), href: url(m, "todos"), activo: m === mes };
             })}
           />
-          <div>
-            <p className="text-sm font-semibold text-cuadra-claro">Cobrado en {nombre}</p>
-            <p className={`${titulo} text-4xl`}>{euro(cobrado)}</p>
-            <p className="text-sm font-semibold text-cuadra-claro">de {euro(facturado)} en recibos</p>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
-            <div className="h-full rounded-full bg-alfalfa" style={{ width: `${facturado ? Math.round((cobrado / facturado) * 100) : 0}%` }} />
-          </div>
-          <Cifras
-            items={[
-              { valor: euro(suma("pendiente")), texto: `pendiente · ${cuantos("pendiente")}`, href: url(mes, "pendiente") },
-              { valor: euro(suma("devuelto")), texto: `devuelto · ${cuantos("devuelto")}`, href: url(mes, "devuelto") },
-              { valor: euro(pendienteFacturar), texto: "sin recibo", href: "#cargos" },
-            ]}
-          />
+          {facturado > 0 ? (
+            <>
+              <div>
+                <p className="text-sm font-semibold text-cuadra-claro">Cobrado en {nombre}</p>
+                <p className="cifra mt-1 text-5xl leading-none">{euro(cobrado)}</p>
+                <p className="mt-1.5 text-sm font-semibold text-cuadra-claro">de {euro(facturado)} en recibos</p>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
+                <div className="h-full rounded-full bg-alfalfa" style={{ width: `${Math.round((cobrado / facturado) * 100)}%` }} />
+              </div>
+              <Cifras
+                items={[
+                  { valor: euro(suma("pendiente")), texto: `pendiente · ${cuantos("pendiente")}`, href: url(mes, "pendiente") },
+                  { valor: euro(suma("devuelto")), texto: `devuelto · ${cuantos("devuelto")}`, href: url(mes, "devuelto") },
+                  { valor: euro(pendienteFacturar), texto: "sin recibo", href: "#cargos" },
+                ]}
+              />
+            </>
+          ) : (
+            <div>
+              <p className="text-sm font-semibold text-cuadra-claro">Por pasar a recibo</p>
+              <p className="cifra mt-1 text-5xl leading-none">{euro(pendienteFacturar)}</p>
+              <p className="mt-1.5 text-sm font-semibold text-cuadra-claro">
+                Aún no hay recibos de {nombre}. Genéralos cuando quieras cobrar.
+              </p>
+            </div>
+          )}
         </Cabecera>
       }
     >
@@ -195,8 +207,8 @@ async function Cobros({ ctx, q }: { ctx: Contexto; q: Record<string, string | st
             ))}
           </ul>
         )}
-        <details className={`${tarjeta} mt-3 p-4`}>
-          <summary className="flex min-h-11 cursor-pointer list-none items-center font-bold text-cuadra">+ Añadir un cargo</summary>
+        <details className={`${tarjeta} mt-3 p-4 group`}>
+          <Resumen>Añadir un cargo</Resumen>
           <form action={crearCargo} className="mt-3 space-y-3">
             <input type="hidden" name="hipica_id" value={hipica.id} />
             <input type="hidden" name="mes" value={mes} />

@@ -85,7 +85,7 @@ export function navegacion(ctx: Pick<Contexto, "hipica" | "yo" | "misCaballos">,
       item("inicio", base, "Inicio", "inicio"),
       item("horario", `${base}/horario`, "Reservar", "calendario"),
       ...(ctx.misCaballos.length ? [item("servicios", `${base}/servicios`, "Servicios", "herradura")] : []),
-      item("familia", `${base}/familia`, "Cuenta", "usuario"),
+      item("familia", `${base}/familia`, "Familia", "personas"),
     ];
   }
   if (rol === "cuadra") {

@@ -87,8 +87,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
       cabecera={
         <Cabecera
           antetitulo={hipica.nombre}
-          titulo="Tu cuenta"
-          detalle="Tu familia, tus recibos y cómo pagar."
+          titulo="Tu familia"
+          detalle="Quién monta, tus recibos y cómo pagar."
           demo={ctx.demo}
         />
       }

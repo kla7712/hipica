@@ -12,7 +12,6 @@ import {
   campo,
   etiqueta,
   tarjeta,
-  titulo,
 } from "@/components/app/ui";
 import { cargarContexto, ESTADOS_RECIBO, euro, METODOS, navegacion, nombreMes, nombrePila, telWhatsApp } from "@/lib/hipica";
 import { UUID } from "@/lib/rutas";
@@ -77,7 +76,7 @@ async function Contenido({ params }: Pick<PageProps<"/hipica/[id]/cobros/[recibo
           titulo={r.cliente?.nombre ?? "Cliente"}
         >
           <div className="flex items-center gap-3">
-            <span className={`${titulo} text-4xl`}>{euro(r.total)}</span>
+            <span className="cifra text-5xl leading-none">{euro(r.total)}</span>
             <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-cuadra">{e.texto}</span>
           </div>
         </Cabecera>

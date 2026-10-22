@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  Resumen,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -104,7 +105,32 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
   const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
 
   return (
-    <PantallaApp nav={nav} cabecera={<Cabecera antetitulo={hipica.nombre} titulo="Ajustes" demo={ctx.demo} />}>
+    <PantallaApp
+      nav={nav}
+      cabecera={
+        <Cabecera antetitulo={hipica.nombre} titulo="Ajustes" demo={ctx.demo}>
+          <nav aria-label="Ir a" className="sin-barra -mx-4 overflow-x-auto px-4">
+            <ul className="flex gap-2">
+              {[
+                ["normas", "Normas"],
+                ["tarifas", "Tarifas y pagos"],
+                ["pistas", "Pistas"],
+                ["servicios", "Servicios"],
+              ].map(([ancla, texto]) => (
+                <li key={ancla}>
+                  <a
+                    href={`#${ancla}`}
+                    className="inline-flex min-h-10 items-center whitespace-nowrap rounded-full bg-white/10 px-4 text-sm font-bold hover:bg-white/20"
+                  >
+                    {texto}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </Cabecera>
+      }
+    >
       {mensaje && (
         <div className="mb-5">
           <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso>
@@ -374,8 +400,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
               ))}
             </ul>
           )}
-          <details className={`${tarjeta} p-4`}>
-            <summary className="flex min-h-11 cursor-pointer list-none items-center font-bold text-cuadra">+ Añadir un servicio</summary>
+          <details className={`${tarjeta} p-4 group`}>
+            <Resumen>Añadir un servicio</Resumen>
             <form action={crearServicio} className="mt-3 space-y-3">
               <input type="hidden" name="hipica_id" value={id} />
               <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">

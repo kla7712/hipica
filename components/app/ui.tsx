@@ -15,7 +15,7 @@ export const botonTexto =
 export const campo =
   "w-full rounded-xl border border-linea bg-white px-3 py-2.5 text-base text-tinta outline-none transition-colors placeholder:text-tinta-suave/70 focus:border-cuadra";
 export const etiqueta = "text-sm font-bold text-tinta";
-export const tarjeta = "rounded-2xl bg-white";
+export const tarjeta = "rounded-2xl border border-linea bg-white";
 export const titulo = "font-titulo font-extrabold tracking-tight";
 
 /* ---------- Iconos (trazo, 24×24) ---------- */
@@ -23,7 +23,7 @@ export const titulo = "font-titulo font-extrabold tracking-tight";
 const trazos = {
   inicio: "M4 11 12 4l8 7v9H4zM10 20v-5h4v5",
   calendario: "M4.5 4.5h15a1.5 1.5 0 0 1 1.5 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19V6a1.5 1.5 0 0 1 1.5-1.5zM3 9.5h18M8 2.5v4M16 2.5v4",
-  herradura: "M7 20c-2-2-3-5-3-8a8 8 0 0 1 16 0c0 3-1 6-3 8M5 15h2.5M16.5 15H19M4.5 10.5H7M17 10.5h2.5",
+  herradura: "M5.6 20.5 4.3 13.4A8 8 0 1 1 19.7 13.4l-1.3 7.1h-3.3l1-6.9a4.5 4.5 0 1 0-8.2 0l1 6.9z",
   cuadra: "M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zM9 21v-6h6v6",
   tarjeta: "M4.5 5.5h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2zM2.5 10h19M6.5 15h4",
   personas: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.5-3.5 3.2-5.5 6.5-5.5s6 2 6.5 5.5M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.8c2 .7 3.2 2.5 3.5 5.2",
@@ -33,6 +33,10 @@ const trazos = {
   flecha: "m9 6 6 6-6 6",
   mas: "M12 5v14M5 12h14",
   check: "m5 12 5 5 9-10",
+  pista: "M12 5c5 0 9 3.1 9 7s-4 7-9 7-9-3.1-9-7 4-7 9-7zM12 9c2.8 0 5 1.3 5 3s-2.2 3-5 3-5-1.3-5-3 2.2-3 5-3z",
+  saco: "M8.5 3.5h7L14 7c3 1.6 4.5 4.6 4.5 8a5 5 0 0 1-5 5h-3a5 5 0 0 1-5-5c0-3.4 1.5-6.4 4.5-8zM10 7h4",
+  campana: "M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5h4",
+  euro: "M17.5 6.5A6.5 6.5 0 1 0 17.5 17.5M4 10.5h9M4 13.5h9",
 } as const;
 
 export type NombreIcono = keyof typeof trazos;
@@ -70,16 +74,18 @@ export function PantallaApp({
 }) {
   return (
     <>
-      <header className="sobre-verde bg-cuadra text-white">
-        <div className="mx-auto w-full max-w-2xl px-4 pb-6 pt-[max(1rem,env(safe-area-inset-top))]">{cabecera}</div>
+      <header className="sobre-verde rounded-b-[1.75rem] bg-cuadra text-white">
+        <div className="mx-auto w-full max-w-2xl px-4 pb-5 pt-[max(0.5rem,env(safe-area-inset-top))]">{cabecera}</div>
       </header>
-      <main className={`mx-auto w-full max-w-2xl flex-1 px-4 pt-5 ${nav ? "pb-32" : "pb-16"}`}>{children}</main>
+      <main className={`mx-auto w-full max-w-2xl flex-1 px-4 pt-6 ${nav ? "pb-32" : "pb-16"}`}>{children}</main>
       {nav && <BarraNav items={nav} />}
     </>
   );
 }
 
-// Contenido de la cabecera: línea superior (hípica / atrás + cuenta), título y extras.
+// Contenido de la cabecera: línea superior (hípica o "atrás" + cuenta), título y extras.
+// En las pantallas principales el antetítulo (normalmente la hípica) va en la línea de arriba
+// para que la cabecera ocupe menos; en las de detalle va encima del título.
 export function Cabecera({
   antetitulo,
   titulo: texto,
@@ -99,28 +105,25 @@ export function Cabecera({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex min-h-11 items-center justify-between gap-3">
+      <div className="flex min-h-12 items-center justify-between gap-3">
         {volver ? (
           <Link
             href={volver.href}
-            className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-cuadra-claro hover:text-white"
+            className="-ml-1 inline-flex min-h-11 items-center gap-1 rounded-full bg-white/10 py-1 pl-2 pr-4 text-sm font-bold hover:bg-white/20"
           >
             <Icono nombre="atras" className="size-5" />
             {volver.texto}
           </Link>
         ) : (
-          <span className="flex min-w-0 items-center gap-2">
-            {demo && (
-              <span className="shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold uppercase tracking-wider">
-                Demo
-              </span>
-            )}
+          <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-cuadra-claro">
+            {demo && <span className="shrink-0 rounded-full bg-alfalfa px-2.5 py-0.5 text-xs font-extrabold text-tinta">Demo</span>}
+            {antetitulo && <span className="truncate">{antetitulo}</span>}
           </span>
         )}
         {cuenta && (
           <Link
             href="/cuenta"
-            className="-mr-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-cuadra-claro hover:text-white"
+            className="-mr-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-cuadra-claro hover:bg-white/10 hover:text-white"
           >
             <Icono nombre="usuario" className="size-5" />
             Mi cuenta
@@ -128,40 +131,42 @@ export function Cabecera({
         )}
       </div>
       <div>
-        {antetitulo && <p className="text-sm font-semibold text-cuadra-claro">{antetitulo}</p>}
-        <h1 className={`${titulo} text-[2rem] leading-tight first-letter:uppercase`}>{texto}</h1>
-        {detalle && <p className="mt-1 text-cuadra-claro">{detalle}</p>}
+        {volver && antetitulo && <p className="text-sm font-semibold text-cuadra-claro">{antetitulo}</p>}
+        <h1 className={`${titulo} text-[2.1rem] leading-[1.08] first-letter:uppercase`}>{texto}</h1>
+        {detalle && <p className="mt-1.5 text-cuadra-claro">{detalle}</p>}
       </div>
       {children}
     </div>
   );
 }
 
-// Tres cifras en la cabecera ("6 clases hoy").
+// Tres cifras en la cabecera ("6 clases hoy"), en una franja con separadores.
 export function Cifras({ items }: { items: { valor: ReactNode; texto: string; href?: string }[] }) {
   return (
-    <dl className="grid grid-cols-3 gap-2.5">
+    <ul
+      className="grid divide-x divide-white/15 rounded-2xl bg-white/[0.07]"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+    >
       {items.map((c) => {
         const contenido = (
           <>
-            <dt className="sr-only">{c.texto}</dt>
-            <dd className={`${titulo} text-2xl leading-none`}>{c.valor}</dd>
-            <dd aria-hidden="true" className="mt-2 text-xs font-semibold leading-tight text-cuadra-claro">
-              {c.texto}
-            </dd>
+            <span className="cifra block truncate text-[1.9rem] leading-none">{c.valor}</span>
+            <span className="mt-1.5 block text-xs font-semibold leading-tight text-cuadra-claro">{c.texto}</span>
           </>
         );
-        return c.href ? (
-          <Link key={c.texto} href={c.href} className="rounded-2xl bg-white/10 p-3 hover:bg-white/15">
-            {contenido}
-          </Link>
-        ) : (
-          <div key={c.texto} className="rounded-2xl bg-white/10 p-3">
-            {contenido}
-          </div>
+        return (
+          <li key={c.texto} className="min-w-0">
+            {c.href ? (
+              <Link href={c.href} className="block h-full rounded-2xl px-3.5 py-3 hover:bg-white/10">
+                {contenido}
+              </Link>
+            ) : (
+              <div className="px-3.5 py-3">{contenido}</div>
+            )}
+          </li>
         );
       })}
-    </dl>
+    </ul>
   );
 }
 
@@ -177,11 +182,11 @@ function BarraNav({ items }: { items: ItemNav[] }) {
             <Link
               href={i.href}
               aria-current={i.activo ? "page" : undefined}
-              className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-semibold ${
-                i.activo ? "text-cuadra" : "text-tinta-suave hover:text-tinta"
+              className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs ${
+                i.activo ? "font-extrabold text-tinta" : "font-semibold text-tinta-suave hover:text-tinta"
               }`}
             >
-              <span className={`rounded-full px-4 py-1 ${i.activo ? "bg-alfalfa-suave" : ""}`}>
+              <span className={`rounded-full px-4 py-1 transition-colors ${i.activo ? "bg-alfalfa" : ""}`}>
                 <Icono nombre={i.icono} className="size-[22px]" />
               </span>
               {i.texto}
@@ -220,11 +225,12 @@ export function Volver({ href, children }: { href: string; children: ReactNode }
 export function CargandoApp() {
   return (
     <>
-      <header className="bg-cuadra">
-        <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-6 pt-[max(1rem,env(safe-area-inset-top))]">
-          <div className="h-11" />
-          <div className="h-4 w-32 rounded bg-white/15" />
-          <div className="h-8 w-56 rounded bg-white/20" />
+      <header className="rounded-b-[1.75rem] bg-cuadra">
+        <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-5 pt-[max(0.5rem,env(safe-area-inset-top))]">
+          <div className="flex h-12 items-center">
+            <div className="h-4 w-32 rounded bg-white/15" />
+          </div>
+          <div className="h-9 w-56 rounded-lg bg-white/20" />
         </div>
       </header>
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-6">
@@ -252,7 +258,7 @@ export function Seccion({
   return (
     <section className="mt-8 first:mt-0" aria-labelledby={id}>
       <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
-        <h2 id={id} className="text-lg font-extrabold">
+        <h2 id={id} className="font-titulo text-xl font-bold tracking-tight">
           {texto}
         </h2>
         {accion}
@@ -295,9 +301,21 @@ export function Aviso({ tipo = "info", children }: { tipo?: "ok" | "error" | "in
   );
 }
 
+// Cabecera de un bloque desplegable ("+ Añadir…"). El <details> que lo envuelve lleva la clase "group".
+export function Resumen({ children }: { children: ReactNode }) {
+  return (
+    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 font-bold text-cuadra [&::-webkit-details-marker]:hidden">
+      <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-alfalfa-suave">
+        <Icono nombre="mas" className="size-4 transition-transform group-open:rotate-45" />
+      </span>
+      {children}
+    </summary>
+  );
+}
+
 export function Vacio({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-linea bg-white/60 px-6 py-8 text-center text-tinta-suave">
+    <div className="rounded-2xl border border-dashed border-tinta-suave/30 px-6 py-7 text-center text-tinta-suave">
       {children}
     </div>
   );
@@ -339,13 +357,33 @@ export function ChipOcupacion({
   );
 }
 
-// La hora grande de cada clase, a la izquierda.
-export function Hora({ inicio, apagada = false }: { inicio: string; apagada?: boolean }) {
+// La hora de cada clase, a la izquierda, como en un marcador: inicio grande y fin debajo.
+export function Hora({ inicio, fin, apagada = false }: { inicio: string; fin?: string; apagada?: boolean }) {
   return (
-    <p
-      className={`w-14 shrink-0 pt-4 text-[1.05rem] font-extrabold tabular-nums ${apagada ? "text-tinta-suave/60" : "text-tinta"}`}
-    >
-      {inicio}
+    <p className={`w-[3.4rem] shrink-0 pt-3.5 ${apagada ? "text-tinta-suave/60" : "text-tinta"}`}>
+      <span className="cifra block text-[1.55rem] leading-none">{inicio}</span>
+      {fin && (
+        <span className="mt-1 block text-xs font-semibold tabular-nums text-tinta-suave">
+          <span className="sr-only">hasta las </span>
+          {fin}
+        </span>
+      )}
+    </p>
+  );
+}
+
+// Datos cortos de una fila (pista, monitor, nivel…), cada uno con su icono.
+export function Meta({ items, className = "" }: { items: { icono?: NombreIcono; texto: ReactNode }[]; className?: string }) {
+  const visibles = items.filter((i) => i.texto);
+  if (visibles.length === 0) return null;
+  return (
+    <p className={`flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-tinta-suave ${className}`}>
+      {visibles.map((i, k) => (
+        <span key={k} className="inline-flex min-w-0 items-center gap-1">
+          {i.icono && <Icono nombre={i.icono} className="size-4 shrink-0 opacity-80" />}
+          {i.texto}
+        </span>
+      ))}
     </p>
   );
 }
@@ -369,10 +407,10 @@ export function Dias({
                 d.activo ? "border-cuadra bg-cuadra text-white" : "border-linea bg-white text-tinta hover:border-tinta-suave"
               }`}
             >
-              <span className={`text-[0.7rem] font-bold uppercase ${d.activo ? "text-cuadra-claro" : "text-tinta-suave"}`}>
+              <span className={`text-xs font-bold first-letter:uppercase ${d.activo ? "text-cuadra-claro" : "text-tinta-suave"}`}>
                 {d.corto}
               </span>
-              <span className={`${titulo} text-xl leading-none`}>{d.numero}</span>
+              <span className="cifra text-2xl leading-none">{d.numero}</span>
               {d.marca && (
                 <span
                   className={`absolute bottom-1.5 size-1.5 rounded-full ${d.activo ? "bg-alfalfa" : "bg-cuadra"}`}
@@ -438,8 +476,8 @@ export function Inicial({ nombre, tono = "neutro" }: { nombre: string; tono?: "n
 export function CasillaFecha({ corto, numero }: { corto: string; numero: string }) {
   return (
     <span className="flex h-14 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-superficie">
-      <span className="text-[0.65rem] font-bold uppercase text-tinta-suave">{corto}</span>
-      <span className={`${titulo} text-xl leading-none`}>{numero}</span>
+      <span className="text-xs font-bold text-tinta-suave first-letter:uppercase">{corto}</span>
+      <span className="cifra text-2xl leading-none">{numero}</span>
     </span>
   );
 }

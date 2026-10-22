@@ -4,11 +4,11 @@
    Marca de la app de la hípica
    ------------------------------------------------------------------ */
 @theme {
-  --color-limo: #f1f3ef;          /* fondo */
-  --color-superficie: #e8ece6;    /* fondos secundarios */
+  --color-limo: #eef1eb;          /* fondo */
+  --color-superficie: #e5eae2;    /* fondos secundarios */
   --color-tinta: #16201a;         /* texto principal */
   --color-tinta-suave: #54605a;   /* texto secundario */
-  --color-linea: #dee3dc;         /* bordes y separadores */
+  --color-linea: #dce2d8;         /* bordes y separadores */
   --color-cuadra: #1f4d3a;        /* verde de la marca: cabecera y acciones */
   --color-cuadra-hover: #173c2d;
   --color-cuadra-claro: #c5dace;  /* texto suave sobre la cabecera */
@@ -37,6 +37,7 @@
 
 html {
   color-scheme: light;
+  scroll-padding-top: 1rem;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -54,6 +55,24 @@ body {
 /* Sobre la cabecera verde, el foco se ve en blanco. */
 .sobre-verde :focus-visible {
   outline-color: #fff;
+}
+
+/* Cifras (horas, días, importes) en estrecho, como el marcador de un concurso. */
+@utility cifra {
+  font-family: var(--font-titulo);
+  font-stretch: 75%;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 /* Fila de días que se desliza en horizontal sin barra visible. */

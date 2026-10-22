@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  Resumen,
   Aviso,
   Cabecera,
   CargandoApp,
@@ -227,9 +228,12 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
       )}
 
       {esAdmin && (
-        <Seccion titulo="Dar de alta un caballo" id="alta">
-          <FormCaballo hipicaId={id} titulares={titulares ?? []} />
-        </Seccion>
+        <details id="alta" className="group mt-8" open={codigo === "error-datos" || codigo === "error-crear"}>
+          <Resumen>Dar de alta un caballo</Resumen>
+          <div className="mt-3">
+            <FormCaballo hipicaId={id} titulares={titulares ?? []} />
+          </div>
+        </details>
       )}
     </PantallaApp>
   );

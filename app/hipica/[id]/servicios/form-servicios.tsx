@@ -32,15 +32,15 @@ export function FormServicios({
       <input type="hidden" name="caballo_id" value={caballoId} />
 
       <fieldset className="min-w-0">
-        <legend className="mb-3 text-lg font-extrabold">¿Qué necesitas?</legend>
+        <legend className="mb-3 font-titulo text-xl font-bold tracking-tight">¿Qué necesitas?</legend>
         <div className="grid grid-cols-2 gap-2.5">
           {servicios.map((s) => {
             const marcado = elegidos.includes(s.id);
             return (
               <label
                 key={s.id}
-                className={`relative flex min-h-28 cursor-pointer flex-col gap-1 rounded-2xl border-2 bg-white p-3.5 ${
-                  marcado ? "border-cuadra" : "border-transparent"
+                className={`relative flex min-h-28 cursor-pointer flex-col gap-1 rounded-2xl border-2 p-3.5 transition-colors ${
+                  marcado ? "border-cuadra bg-alfalfa-suave" : "border-linea bg-white hover:border-tinta-suave/40"
                 }`}
               >
                 <input
@@ -63,12 +63,12 @@ export function FormServicios({
       </fieldset>
 
       <fieldset className="min-w-0">
-        <legend className="mb-3 text-lg font-extrabold">¿Cuándo?</legend>
+        <legend className="mb-3 font-titulo text-xl font-bold tracking-tight">¿Cuándo?</legend>
         <div className="sin-barra -mx-4 flex gap-2 overflow-x-auto px-4">
           {dias.map((d) => (
             <label
               key={d.valor}
-              className={`flex h-16 w-[3.25rem] shrink-0 cursor-pointer flex-col items-center justify-center rounded-2xl border ${
+              className={`relative flex h-16 w-[3.25rem] shrink-0 cursor-pointer flex-col items-center justify-center rounded-2xl border ${
                 dia === d.valor ? "border-cuadra bg-cuadra text-white" : "border-linea bg-white"
               }`}
             >
@@ -80,10 +80,10 @@ export function FormServicios({
                 onChange={() => setDia(d.valor)}
                 className="sr-only"
               />
-              <span className={`text-[0.7rem] font-bold uppercase ${dia === d.valor ? "text-cuadra-claro" : "text-tinta-suave"}`}>
+              <span className={`text-xs font-bold first-letter:uppercase ${dia === d.valor ? "text-cuadra-claro" : "text-tinta-suave"}`}>
                 {d.corto}
               </span>
-              <span className="font-titulo text-xl font-extrabold leading-none">{d.numero}</span>
+              <span className="cifra text-2xl leading-none">{d.numero}</span>
             </label>
           ))}
         </div>
