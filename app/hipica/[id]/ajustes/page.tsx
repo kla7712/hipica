@@ -16,12 +16,14 @@ import {
   etiqueta,
   tarjeta,
 } from "@/components/app/ui";
-import { cargarContexto, navegacion } from "@/lib/hipica";
-import { cambiarPista, crearPista, guardarAjustes } from "./actions";
+import { cargarContexto, euros, navegacion } from "@/lib/hipica";
+import { borrarServicio, cambiarPista, crearPista, crearServicio, guardarAjustes, serviciosTipicos } from "./actions";
 
 const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
   guardado: { tipo: "ok", texto: "Ajustes guardados." },
   pista: { tipo: "ok", texto: "Pista añadida." },
+  servicio: { tipo: "ok", texto: "Servicios actualizados." },
+  "error-servicio": { tipo: "error", texto: "No se ha podido añadir el servicio. Revisa el nombre y el precio." },
   "error-datos": { tipo: "error", texto: "Revisa los datos." },
   "error-guardar": { tipo: "error", texto: "No se han podido guardar los ajustes. Vuelve a intentarlo." },
   "error-pista": { tipo: "error", texto: "No se ha podido añadir la pista. Revisa el nombre." },
@@ -29,6 +31,7 @@ const MENSAJES: Record<string, { tipo: "ok" | "error"; texto: string }> = {
 
 type Ajustes = { nombre: string; horas_minimas_anulacion: number; calendario_auto: boolean; semanas_auto: number; exigir_bono: boolean };
 type Pista = { id: string; nombre: string; activa: boolean };
+type Servicio = { id: string; nombre: string; descripcion: string | null; precio: number | null };
 
 export default function AjustesPage({ params, searchParams }: PageProps<"/hipica/[id]/ajustes">) {
   return (
@@ -43,7 +46,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
   const { ok, error } = await searchParams;
   const ctx = await cargarContexto(id);
   const { supabase, hipica } = ctx;
-  const nav = navegacion(id, ctx.yo.rol, "ajustes");
+  const nav = navegacion(ctx, "ajustes");
 
   if (!ctx.esAdmin) {
     return (
@@ -53,13 +56,20 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
     );
   }
 
-  const [{ data: h }, { data: pistas }] = await Promise.all([
+  const [{ data: h }, { data: pistas }, { data: servicios }] = await Promise.all([
     supabase
       .from("hipicas")
       .select("nombre, horas_minimas_anulacion, calendario_auto, semanas_auto, exigir_bono")
       .eq("id", id)
       .single<Ajustes>(),
     supabase.from("pistas").select("id, nombre, activa").eq("hipica_id", id).order("orden").returns<Pista[]>(),
+    supabase
+      .from("servicios")
+      .select("id, nombre, descripcion, precio")
+      .eq("hipica_id", id)
+      .eq("activo", true)
+      .order("orden")
+      .returns<Servicio[]>(),
   ]);
   if (!h) throw new Error("No se han podido cargar los ajustes");
 
@@ -191,6 +201,71 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
             </button>
           </form>
           <p className="text-sm text-tinta-suave">Así cada clase dice dónde es y en Hoy puedes ver cada pista por separado.</p>
+        </div>
+      </Seccion>
+      <Seccion titulo="Servicios para propietarios" id="servicios">
+        <div className="space-y-3">
+          {(servicios ?? []).length === 0 ? (
+            <form action={serviciosTipicos} className={`${tarjeta} space-y-3 p-4`}>
+              <input type="hidden" name="hipica_id" value={id} />
+              <p className="text-sm text-tinta-suave">
+                Lo que los propietarios pueden pedir desde la app (montarlo, ducha, mantas…). Empieza con los típicos y
+                ajusta los precios.
+              </p>
+              <button type="submit" className={`${boton} w-full`}>
+                Añadir los servicios típicos
+              </button>
+            </form>
+          ) : (
+            <ul className={`${tarjeta} divide-y divide-linea overflow-hidden`}>
+              {(servicios ?? []).map((sv) => (
+                <li key={sv.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold">{sv.nombre}</span>
+                    {sv.descripcion && <span className="block text-sm text-tinta-suave">{sv.descripcion}</span>}
+                  </span>
+                  <span className="shrink-0 text-sm font-bold text-cuadra">{euros(sv.precio)}</span>
+                  <form action={borrarServicio}>
+                    <input type="hidden" name="hipica_id" value={id} />
+                    <input type="hidden" name="servicio_id" value={sv.id} />
+                    <button type="submit" className={`${botonTexto} hover:text-alerta`} aria-label={`Quitar ${sv.nombre}`}>
+                      Quitar
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+          <details className={`${tarjeta} p-4`}>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center font-bold text-cuadra">+ Añadir un servicio</summary>
+            <form action={crearServicio} className="mt-3 space-y-3">
+              <input type="hidden" name="hipica_id" value={id} />
+              <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
+                <div className="space-y-1.5">
+                  <label htmlFor="sv-nombre" className={etiqueta}>
+                    Nombre
+                  </label>
+                  <input id="sv-nombre" name="nombre" required maxLength={60} placeholder="Ej.: Esquilar" className={campo} />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="sv-precio" className={etiqueta}>
+                    Precio (€)
+                  </label>
+                  <input id="sv-precio" name="precio" inputMode="decimal" placeholder="Vacío = según tarifa" className={campo} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="sv-desc" className={etiqueta}>
+                  Descripción <span className="font-normal text-tinta-suave">(opcional)</span>
+                </label>
+                <input id="sv-desc" name="descripcion" maxLength={120} className={campo} />
+              </div>
+              <button type="submit" className={`${botonSecundario} w-full`}>
+                Añadir
+              </button>
+              <p className="text-sm text-tinta-suave">Pon 0 si va incluido en el pupilaje. Para cambiar un precio, quítalo y vuelve a añadirlo.</p>
+            </form>
+          </details>
         </div>
       </Seccion>
     </PantallaApp>

@@ -48,7 +48,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/clase
   const query = await searchParams;
   const ctx = await cargarContexto(id);
   const { supabase, hipica } = ctx;
-  const nav = navegacion(id, ctx.yo.rol, "horario");
+  const nav = navegacion(ctx, "horario");
   const volver = { href: `/hipica/${id}/horario`, texto: "Clases" };
 
   if (!ctx.esAdmin) {

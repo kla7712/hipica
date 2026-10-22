@@ -72,3 +72,53 @@ export async function cambiarPista(formData: FormData) {
   if (error) console.error("cambiar pista:", error.message);
   refresh();
 }
+
+/* ---------- Servicios para propietarios ---------- */
+
+export async function crearServicio(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  if (!UUID.test(hipicaId)) redirect("/");
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const descripcion = String(formData.get("descripcion") ?? "").trim();
+  const precioTexto = String(formData.get("precio") ?? "").trim().replace(",", ".");
+  const precio = precioTexto === "" ? null : Number(precioTexto);
+  if (
+    nombre.length < 1 ||
+    nombre.length > 60 ||
+    descripcion.length > 120 ||
+    (precio !== null && (!Number.isFinite(precio) || precio < 0 || precio > 10000))
+  ) {
+    redirect(`/hipica/${hipicaId}/ajustes?error=servicio#servicios`);
+  }
+
+  const supabase = await createClient();
+  const { count } = await supabase.from("servicios").select("id", { count: "exact", head: true }).eq("hipica_id", hipicaId);
+  const { error } = await supabase
+    .from("servicios")
+    .insert({ hipica_id: hipicaId, nombre, descripcion: descripcion || null, precio, orden: (count ?? 0) + 1 });
+  if (error) {
+    console.error("crear servicio:", error.message);
+    redirect(`/hipica/${hipicaId}/ajustes?error=servicio#servicios`);
+  }
+  redirect(`/hipica/${hipicaId}/ajustes?ok=servicio#servicios`);
+}
+
+export async function borrarServicio(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  const servicioId = String(formData.get("servicio_id") ?? "");
+  if (!UUID.test(hipicaId) || !UUID.test(servicioId)) redirect("/");
+  const supabase = await createClient();
+  // Las solicitudes ya hechas guardan su copia del servicio y su precio.
+  const { error } = await supabase.from("servicios").delete().eq("id", servicioId).eq("hipica_id", hipicaId);
+  if (error) console.error("borrar servicio:", error.message);
+  refresh();
+}
+
+export async function serviciosTipicos(formData: FormData) {
+  const hipicaId = String(formData.get("hipica_id") ?? "");
+  if (!UUID.test(hipicaId)) redirect("/");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("servicios_tipicos", { p_hipica: hipicaId });
+  if (error) console.error("servicios típicos:", error.message);
+  redirect(`/hipica/${hipicaId}/ajustes?ok=servicio#servicios`);
+}

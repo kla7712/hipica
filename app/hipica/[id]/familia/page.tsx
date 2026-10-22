@@ -80,7 +80,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
 
   return (
     <PantallaApp
-      nav={navegacion(id, ctx.yo.rol, "familia")}
+      nav={navegacion(ctx, "familia")}
       cabecera={
         <Cabecera
           antetitulo={hipica.nombre}

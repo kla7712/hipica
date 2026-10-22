@@ -15,10 +15,11 @@ import {
   Vacio,
   tarjeta,
 } from "@/components/app/ui";
-import { fechas, navegacion, type Contexto } from "@/lib/hipica";
+import { CUIDADOS, cuandoToca, fechas, navegacion, type Contexto } from "@/lib/hipica";
 import { resumenBono, type EstadoBono, type SesionHorario } from "@/lib/tipos";
 import { textoAviso } from "@/lib/avisos";
 import { Tablon } from "./tablon";
+import { ListaSolicitudes, type Solicitud } from "./servicios/solicitudes";
 
 type Alerta = { titulo: string; detalle: string; href: string; tono: "atencion" | "info" };
 type Caballo = { id: string; nombre: string; disponible: boolean; max_clases_dia: number };
@@ -32,7 +33,8 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
   const manana = f.clave(new Date(ahora.getTime() + 864e5));
   const base = `/hipica/${hipica.id}`;
 
-  const [{ data: horario, error }, { data: caballos }, { data: bonos }] = await Promise.all([
+  const en7 = new Date(Date.parse(`${hoy}T12:00:00Z`) + 7 * 864e5).toISOString().slice(0, 10);
+  const [{ data: horario, error }, { data: caballos }, { data: bonos }, { data: cuidados }, { data: solicitudes }] = await Promise.all([
     supabase.rpc("horario", {
       p_hipica: hipica.id,
       p_desde: new Date(ahora.getTime() - 16 * 36e5).toISOString(),
@@ -45,6 +47,24 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
       .eq("activo", true)
       .returns<Caballo[]>(),
     supabase.rpc("estado_bonos", { p_hipica: hipica.id }),
+    supabase
+      .from("cuidados")
+      .select("id, caballo_id, tipo, fecha, responsable, caballos(nombre, tipo)")
+      .eq("hipica_id", hipica.id)
+      .eq("hecho", false)
+      .lte("fecha", en7)
+      .order("fecha")
+      .returns<
+        { id: string; caballo_id: string; tipo: string; fecha: string; responsable: string | null; caballos: { nombre: string; tipo: string } | null }[]
+      >(),
+    supabase
+      .from("solicitudes")
+      .select("id, caballo_id, fecha, servicios, total, nota, estado, created_at")
+      .eq("hipica_id", hipica.id)
+      .eq("estado", "pendiente")
+      .order("fecha")
+      .limit(5)
+      .returns<Solicitud[]>(),
   ]);
   if (error) throw new Error(error.message);
 
@@ -131,7 +151,27 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
       tono: "atencion",
     });
   }
+  // Cuidados de la próxima semana (herrador, vacunas…), primero los vencidos.
+  const cuidadosAlertas: Alerta[] = (cuidados ?? []).map((c) => {
+    const t = cuandoToca(c.fecha, hoy);
+    const respuesta =
+      c.caballos?.tipo === "propietario"
+        ? c.responsable === "hipica"
+          ? " · se encarga la hípica"
+          : c.responsable === "propietario"
+            ? " · se encarga el propietario"
+            : " · esperando al propietario"
+        : "";
+    return {
+      titulo: `${CUIDADOS[c.tipo] ?? c.tipo} · ${c.caballos?.nombre ?? "Caballo"}`,
+      detalle: `${t.texto}${respuesta}`,
+      href: `${base}/caballos/${c.caballo_id}`,
+      tono: t.dias <= 1 ? "atencion" : "info",
+    };
+  });
+  alertas.push(...cuidadosAlertas);
   alertas.sort((a, b) => (a.tono === b.tono ? 0 : a.tono === "atencion" ? -1 : 1));
+  const nombreCaballo = new Map((caballos ?? []).map((c) => [c.id, c.nombre]));
 
   /* ---------- Clases de hoy, filtrables por pista ---------- */
   const pistas = [...new Set(deHoy.map((s) => s.pista).filter((p): p is string => !!p))];
@@ -142,7 +182,7 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
 
   return (
     <PantallaApp
-      nav={navegacion(hipica.id, ctx.yo.rol, "inicio")}
+      nav={navegacion(ctx, "inicio")}
       cabecera={
         <Cabecera antetitulo={hipica.nombre} titulo={f.largo(ahora)} demo={ctx.demo}>
           <Cifras
@@ -176,6 +216,26 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
               </li>
             ))}
           </ul>
+        </Seccion>
+      )}
+
+      {(solicitudes ?? []).length > 0 && (
+        <Seccion
+          titulo="Servicios por confirmar"
+          id="solicitudes"
+          accion={
+            <Link href={`${base}/servicios`} className="text-sm font-bold text-cuadra hover:underline">
+              Ver todos
+            </Link>
+          }
+        >
+          <ListaSolicitudes
+            solicitudes={solicitudes ?? []}
+            hipicaId={hipica.id}
+            volver={base}
+            modo="equipo"
+            nombreCaballo={(id) => nombreCaballo.get(id) ?? null}
+          />
         </Seccion>
       )}
 
@@ -239,8 +299,8 @@ export function FilaClase({
     <li className="flex gap-3">
       <Hora inicio={hora} apagada={apagada} />
       <Link href={href} className={`${tarjeta} block min-w-0 flex-1 p-4 hover:ring-1 hover:ring-linea`}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+          <div className="min-w-0 flex-1 basis-36">
             <p className={`font-extrabold ${s.cancelada ? "text-tinta-suave line-through" : apagada ? "text-tinta-suave" : ""}`}>
               {s.titulo}
             </p>

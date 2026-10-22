@@ -45,7 +45,7 @@ type Sesion = {
 type Persona = { id: string; nombre: string; telefono: string | null; titular_id: string | null; rol: string; nivel: string | null };
 type Reserva = { id: string; asistio: boolean | null; caballo_id: string | null; desde_espera: boolean; miembro_id: string };
 type Espera = { id: string; miembro_id: string };
-type Caballo = { id: string; nombre: string; disponible: boolean; max_clases_dia: number };
+type Caballo = { id: string; nombre: string; disponible: boolean; max_clases_dia: number; tipo: string; propietario_id: string | null };
 type Uso = { caballo_id: string; sesion_id: string; sesiones: { inicio: string } };
 
 const ERRORES: Record<string, string> = {
@@ -75,7 +75,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
   if (!ctx.esStaff) {
     return (
       <PantallaApp
-        nav={navegacion(id, ctx.yo.rol, "horario")}
+        nav={navegacion(ctx, "horario")}
         cabecera={<Cabecera titulo="Lista de la clase" volver={{ href: `${base}/horario`, texto: "Reservar" }} />}
       >
         <Vacio>Solo la hípica puede ver la lista de alumnos de una clase.</Vacio>
@@ -111,7 +111,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
         .returns<Persona[]>(),
       supabase
         .from("caballos")
-        .select("id, nombre, disponible, max_clases_dia")
+        .select("id, nombre, disponible, max_clases_dia, tipo, propietario_id")
         .eq("hipica_id", id)
         .eq("activo", true)
         .order("nombre")
@@ -177,7 +177,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
 
   return (
     <PantallaApp
-      nav={navegacion(id, ctx.yo.rol, "horario")}
+      nav={navegacion(ctx, "horario")}
       cabecera={
         <Cabecera
           volver={{ href: `${base}/horario?dia=${dia}`, texto: "Clases" }}
@@ -275,7 +275,8 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/sesio
                           { valor: "", texto: r.caballo_id ? "Quitar caballo" : "Sin caballo asignado" },
                           ...(caballos ?? []).map((c) => {
                             const n = otras.get(c.id) ?? 0;
-                            let texto = c.nombre;
+                            const suyo = c.propietario_id && (c.propietario_id === r.miembro_id || c.propietario_id === p?.titular_id);
+                            let texto = c.tipo === "propietario" ? `${c.nombre} (${suyo ? "su caballo" : "de propietario"})` : c.nombre;
                             if (enEsta.has(c.id)) texto += " · ya en esta clase";
                             else if (!c.disponible) texto += " · en reposo";
                             else if (n >= c.max_clases_dia) texto += ` · ya tiene ${n} clases (máx. ${c.max_clases_dia})`;

@@ -16,6 +16,7 @@ import { resumenBono, type EstadoBono, type SesionHorario } from "@/lib/tipos";
 import { textoAviso } from "@/lib/avisos";
 import { anular, salirEspera } from "./actions";
 import { Tablon } from "./tablon";
+import { MisCaballos } from "./mis-caballos";
 
 const DIAS = 14;
 
@@ -70,7 +71,7 @@ export async function Inicio({ ctx, aviso }: { ctx: Contexto; aviso?: string | s
 
   return (
     <PantallaApp
-      nav={navegacion(hipica.id, ctx.yo.rol, "inicio")}
+      nav={navegacion(ctx, "inicio")}
       cabecera={<Cabecera antetitulo={hipica.nombre} titulo={`Hola, ${nombrePila(ctx.yo.nombre)}`} demo={ctx.demo} />}
     >
       <div className="space-y-3">
@@ -83,11 +84,13 @@ export async function Inicio({ ctx, aviso }: { ctx: Contexto; aviso?: string | s
         )}
         {ctx.demo && (
           <Aviso tipo="info">
-            Estás en la demo como una madre con dos hijos. Reserva, anula o apúntate a una lista de espera: todo vuelve a
-            su estado original cada noche.
+            Estás en la demo como una madre con dos hijos y un caballo en pupilaje. Reserva clases, pide servicios para
+            Trueno o responde a su vacuna: todo vuelve a su estado original cada noche.
           </Aviso>
         )}
       </div>
+
+      <MisCaballos ctx={ctx} />
 
       {conBono.length > 0 && (
         <Seccion titulo={familia ? "Bonos de clases" : "Tu bono"} id="bonos">

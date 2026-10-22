@@ -47,7 +47,7 @@ check('el nombre vuelve a su estado original', (await root(`select nombre from p
 // Novedades de la escuela (0007)
 const cuenta = async (sql, p = [h2]) => (await root(sql, p)).rows[0].n;
 check('la demo tiene 3 pistas', await cuenta(`select count(*)::int n from public.pistas where hipica_id = $1`) === 3);
-check('la demo tiene caballos, uno en reposo', await cuenta(`select count(*)::int n from public.caballos where hipica_id = $1`) === 8
+check('la demo tiene caballos, uno en reposo', await cuenta(`select count(*)::int n from public.caballos where hipica_id = $1 and tipo = 'escuela'`) === 8
   && await cuenta(`select count(*)::int n from public.caballos where hipica_id = $1 and not disponible`) === 1);
 check('hay clases hoy o mañana', await cuenta(`select count(*)::int n from public.sesiones where hipica_id = $1 and inicio < now() + interval '1 day'`) > 0);
 check('hay alguien en lista de espera', await cuenta(`select count(*)::int n from public.esperas where hipica_id = $1`) === 2);
@@ -63,6 +63,14 @@ const ba = (await as(A, `select * from public.estado_bonos($1)`, [h2])).rows;
 check('el admin ve alumnos sin bono y con bono agotado', ba.some(b => !b.bono_id) && ba.some(b => b.bono_id && b.usadas >= b.clases));
 const esp = (await as(F, `select * from public.horario($1, now(), now() + interval '14 days')`, [h2])).rows.filter(r => r.esperas.length);
 check('la familia ve a Pablo en una lista de espera', esp.length === 1 && esp[0].esperas[0].nombre === 'Pablo López', JSON.stringify(esp.map(e => e.esperas)));
+
+// Propietarios (0008)
+const mios = (await as(F, `select nombre, ubicacion from public.caballos`)).rows;
+check('la familia ve solo su caballo, Trueno', mios.length === 1 && mios[0].nombre === 'Trueno', JSON.stringify(mios));
+check('Trueno tiene cuidados pendientes', (await as(F, `select * from public.cuidados where not hecho`)).rows.length === 3);
+check('hay una solicitud pendiente para la hípica', (await as(A, `select * from public.solicitudes where estado = 'pendiente'`)).rows.length === 1);
+check('la familia no ve la solicitud de otro propietario', (await as(F, `select * from public.solicitudes where estado = 'pendiente'`)).rows.length === 0);
+check('hay 8 servicios', (await as(F, `select * from public.servicios`)).rows.length === 8);
 try { await as(A, `select public.borrar_mi_cuenta()`); check('la cuenta demo no se puede borrar', false); }
 catch (e) { check('la cuenta demo no se puede borrar', /demostración/.test(e.message), e.message); }
 try { await as(A, `select public.reset_demo()`); check('la app no puede lanzar reset_demo', false); }

@@ -161,7 +161,7 @@ async function Horario({
   const conBono = jinetes.filter((j) => bonos.get(j.id)?.bono_id);
 
   return (
-    <PantallaApp nav={navegacion(hipica.id, ctx.yo.rol, "horario")} cabecera={cabecera}>
+    <PantallaApp nav={navegacion(ctx, "horario")} cabecera={cabecera}>
       <div className="space-y-4">
         {mensaje && <Aviso tipo="error">{mensaje}</Aviso>}
 
@@ -323,8 +323,8 @@ function ClaseAlumno({
     <li className="flex gap-3">
       <Hora inicio={hora} apagada={s.cancelada} />
       <div className={`${tarjeta} min-w-0 flex-1 p-4 ${mias && !s.cancelada ? "ring-2 ring-alfalfa" : ""}`}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+          <div className="min-w-0 flex-1 basis-36">
             <p className={`font-extrabold ${s.cancelada ? "text-tinta-suave line-through" : ""}`}>{s.titulo}</p>
             <p className="text-sm text-tinta-suave">
               {[s.pista, s.monitor && `con ${nombrePila(s.monitor)}`, s.nivel].filter(Boolean).join(" · ")}

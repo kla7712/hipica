@@ -47,7 +47,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
   const { f: filtroQ, ok, error: codigoError } = await searchParams;
   const ctx = await cargarContexto(id);
   const { supabase, hipica } = ctx;
-  const nav = navegacion(id, ctx.yo.rol, "miembros");
+  const nav = navegacion(ctx, "miembros");
   const base = `/hipica/${id}`;
 
   if (!ctx.esAdmin) {

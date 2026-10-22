@@ -24,6 +24,8 @@ export type Contexto = {
   hipica: Hipica;
   esAdmin: boolean;
   esStaff: boolean;
+  // Caballos de los que soy propietario (yo o alguien a mi cargo). Vacío para el equipo.
+  misCaballos: { id: string; nombre: string }[];
 };
 
 export async function cargarContexto(hipicaId: string): Promise<Contexto> {
@@ -42,6 +44,16 @@ export async function cargarContexto(hipicaId: string): Promise<Contexto> {
     .maybeSingle<{ id: string; nombre: string; rol: Rol; hipicas: Hipica | null }>();
   if (!yo?.hipicas) notFound();
 
+  const esStaff = yo.rol === "admin" || yo.rol === "monitor";
+  const { data: caballos } = esStaff
+    ? { data: [] }
+    : await supabase
+        .from("caballos")
+        .select("id, nombre")
+        .eq("hipica_id", hipicaId)
+        .order("nombre")
+        .returns<{ id: string; nombre: string }[]>();
+
   return {
     supabase,
     userId,
@@ -49,14 +61,16 @@ export async function cargarContexto(hipicaId: string): Promise<Contexto> {
     yo: { id: yo.id, nombre: yo.nombre, rol: yo.rol },
     hipica: yo.hipicas,
     esAdmin: yo.rol === "admin",
-    esStaff: yo.rol === "admin" || yo.rol === "monitor",
+    esStaff,
+    misCaballos: caballos ?? [],
   };
 }
 
-export type Seccion = "inicio" | "horario" | "caballos" | "miembros" | "ajustes" | "familia" | null;
+export type Seccion = "inicio" | "horario" | "caballos" | "miembros" | "ajustes" | "familia" | "servicios" | null;
 
-export function navegacion(hipicaId: string, rol: Rol, activa: Seccion): ItemNav[] {
-  const base = `/hipica/${hipicaId}`;
+export function navegacion(ctx: Pick<Contexto, "hipica" | "yo" | "misCaballos">, activa: Seccion): ItemNav[] {
+  const base = `/hipica/${ctx.hipica.id}`;
+  const rol = ctx.yo.rol;
   const item = (s: Exclude<Seccion, null>, href: string, texto: string, icono: ItemNav["icono"]): ItemNav => ({
     href,
     texto,
@@ -67,6 +81,7 @@ export function navegacion(hipicaId: string, rol: Rol, activa: Seccion): ItemNav
     return [
       item("inicio", base, "Inicio", "inicio"),
       item("horario", `${base}/horario`, "Reservar", "calendario"),
+      ...(ctx.misCaballos.length ? [item("servicios", `${base}/servicios`, "Servicios", "herradura")] : []),
       item("familia", `${base}/familia`, "Familia", "personas"),
     ];
   }
@@ -117,3 +132,44 @@ export const TIPOS_CLASE: Record<string, string> = {
   particular: "Clase particular",
   libre: "Pista libre",
 };
+
+/* ---------- Caballos ---------- */
+
+export const UBICACIONES: Record<string, string> = {
+  box: "En el box",
+  paddock: "En el paddock",
+  pista: "En la pista",
+  fuera: "Fuera de la hípica",
+};
+
+export const PUPILAJES: Record<string, string> = {
+  completo: "Pupilaje completo",
+  semi: "Semipupilaje",
+  box: "Solo box",
+};
+
+export const CUIDADOS: Record<string, string> = {
+  herrador: "Herrador",
+  vacuna: "Vacuna",
+  desparasitacion: "Desparasitación",
+  dentista: "Dentista",
+  veterinario: "Veterinario",
+  otro: "Otro",
+};
+
+// Días entre dos fechas "AAAA-MM-DD".
+export const diasEntre = (desde: string, hasta: string) =>
+  Math.round((Date.parse(`${hasta}T12:00:00Z`) - Date.parse(`${desde}T12:00:00Z`)) / 864e5);
+
+// "Hoy", "Mañana", "En 4 días", "Hace 2 días" y su color.
+export function cuandoToca(fecha: string, hoy: string): { texto: string; tono: "alerta" | "atencion" | "info" | "neutro"; dias: number } {
+  const d = diasEntre(hoy, fecha);
+  if (d < 0) return { texto: d === -1 ? "Venció ayer" : `Venció hace ${-d} días`, tono: "alerta", dias: d };
+  if (d === 0) return { texto: "Hoy", tono: "atencion", dias: d };
+  if (d === 1) return { texto: "Mañana", tono: "atencion", dias: d };
+  if (d <= 7) return { texto: `En ${d} días`, tono: "info", dias: d };
+  return { texto: `En ${d} días`, tono: "neutro", dias: d };
+}
+
+export const euros = (n: number | string | null) =>
+  n === null ? "Según tarifa" : Number(n) === 0 ? "Incluido" : `${Number(n).toLocaleString("es-ES", { maximumFractionDigits: 2 })} €`;
