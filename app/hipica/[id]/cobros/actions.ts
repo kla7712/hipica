@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { UUID } from "@/lib/rutas";
+import { avisar } from "@/lib/avisar";
 
 function ids(formData: FormData, ...campos: string[]) {
   const valores = campos.map((c) => String(formData.get(c) ?? ""));
@@ -21,6 +22,7 @@ export async function generarRecibos(formData: FormData) {
   if (!MES.test(mes)) redirect("/");
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("generar_recibos", { p_hipica: hipicaId, p_mes: mes });
+  avisar();
   const aqui = `/hipica/${hipicaId}/cobros?mes=${mes.slice(0, 7)}`;
   if (error) {
     console.error("generar recibos:", error.message);

@@ -27,6 +27,7 @@ export type Contexto = {
   esEquipo: boolean; // admin, monitor o cuadra
   // Caballos de los que soy propietario (yo o alguien a mi cargo). Vacío para el equipo.
   misCaballos: { id: string; nombre: string }[];
+  sinLeer: number; // avisos sin leer (campana)
 };
 
 export async function cargarContexto(hipicaId: string): Promise<Contexto> {
@@ -47,14 +48,21 @@ export async function cargarContexto(hipicaId: string): Promise<Contexto> {
 
   const esStaff = yo.rol === "admin" || yo.rol === "monitor";
   const esEquipo = esStaff || yo.rol === "cuadra";
-  const { data: caballos } = esEquipo
-    ? { data: [] }
-    : await supabase
-        .from("caballos")
-        .select("id, nombre")
-        .eq("hipica_id", hipicaId)
-        .order("nombre")
-        .returns<{ id: string; nombre: string }[]>();
+  const [{ data: caballos }, { count: sinLeer }] = await Promise.all([
+    esEquipo
+      ? Promise.resolve({ data: [] })
+      : supabase
+          .from("caballos")
+          .select("id, nombre")
+          .eq("hipica_id", hipicaId)
+          .order("nombre")
+          .returns<{ id: string; nombre: string }[]>(),
+    supabase
+      .from("notificaciones")
+      .select("id", { count: "exact", head: true })
+      .eq("miembro_id", yo.id)
+      .is("leida_en", null),
+  ]);
 
   return {
     supabase,
@@ -66,7 +74,13 @@ export async function cargarContexto(hipicaId: string): Promise<Contexto> {
     esStaff,
     esEquipo,
     misCaballos: caballos ?? [],
+    sinLeer: sinLeer ?? 0,
   };
+}
+
+// La campana de la cabecera.
+export function campana(ctx: Pick<Contexto, "hipica" | "sinLeer">) {
+  return { href: `/hipica/${ctx.hipica.id}/avisos`, sinLeer: ctx.sinLeer };
 }
 
 export type Seccion = "inicio" | "horario" | "cuadra" | "caballos" | "cobros" | "gestion" | "familia" | "servicios" | null;

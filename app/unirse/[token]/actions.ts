@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { avisar } from "@/lib/avisar";
 
 export async function aceptarInvitacion(formData: FormData) {
   const token = String(formData.get("token") ?? "");
@@ -51,6 +52,7 @@ export async function solicitarAlta(formData: FormData) {
     p_caballo: caballo,
     p_nota: nota || null,
   });
+  avisar();
   if (error) {
     console.error("solicitar_alta:", error.message);
     const m = error.message;

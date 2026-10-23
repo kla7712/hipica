@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Aviso, Cabecera, CargandoApp, Filtros, PantallaApp, Seccion, Vacio } from "@/components/app/ui";
-import { cargarContexto, fechas, navegacion, type Contexto } from "@/lib/hipica";
+import { cargarContexto, fechas, navegacion, type Contexto, campana } from "@/lib/hipica";
 import { textoAviso } from "@/lib/avisos";
 import { FormServicios } from "./form-servicios";
 import { ListaSolicitudes, type Solicitud } from "./solicitudes";
@@ -58,7 +58,7 @@ async function Propietario({
 
   if (!caballo) {
     return (
-      <PantallaApp nav={nav} cabecera={<Cabecera antetitulo={hipica.nombre} titulo="Servicios" />}>
+      <PantallaApp nav={nav} cabecera={<Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Servicios" />}>
         <Vacio>Los servicios son para los propietarios de caballos en pupilaje.</Vacio>
       </PantallaApp>
     );
@@ -94,7 +94,7 @@ async function Propietario({
   return (
     <PantallaApp
       nav={nav}
-      cabecera={<Cabecera antetitulo={`Para ${caballo.nombre}`} titulo="Servicios" demo={ctx.demo} />}
+      cabecera={<Cabecera campana={campana(ctx)} antetitulo={`Para ${caballo.nombre}`} titulo="Servicios" demo={ctx.demo} />}
     >
       <div className="space-y-4">
         {mensaje && <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso>}

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { UUID } from "@/lib/rutas";
+import { avisar } from "@/lib/avisar";
 
 function ids(formData: FormData, ...campos: string[]) {
   const valores = campos.map((c) => String(formData.get(c) ?? ""));
@@ -57,6 +58,7 @@ export async function quitarAlumno(formData: FormData) {
   const [reservaId] = ids(formData, "reserva_id");
   const supabase = await createClient();
   const { error } = await supabase.rpc("anular_reserva", { p_reserva: reservaId });
+  avisar();
   if (error) console.error("quitar alumno:", error.message);
   hecho(formData);
 }
@@ -69,6 +71,7 @@ export async function cambiarCancelacion(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.from("sesiones").update({ cancelada }).eq("id", sesionId).eq("hipica_id", hipicaId);
+  avisar();
   if (error) console.error("cancelar sesión:", error.message);
   redirect(`/hipica/${hipicaId}/sesion/${sesionId}`);
 }

@@ -3,7 +3,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const RUTAS_PUBLICAS = ["/login", "/auth", "/unirse"];
+// /api/avisos se protege con su propio secreto (lo llama Vercel, sin sesión).
+const RUTAS_PUBLICAS = ["/login", "/auth", "/unirse", "/api/avisos"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -47,7 +48,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Todo menos archivos estáticos, imágenes y el manifiesto de la app.
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // Todo menos archivos estáticos, imágenes, el manifiesto y el service worker de la app.
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

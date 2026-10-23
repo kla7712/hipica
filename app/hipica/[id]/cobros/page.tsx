@@ -22,7 +22,7 @@ import {
   etiqueta,
   tarjeta,
 } from "@/components/app/ui";
-import { cargarContexto, ESTADOS_RECIBO, euro, fechas, mover, navegacion, nombreMes, type Contexto } from "@/lib/hipica";
+import { cargarContexto, ESTADOS_RECIBO, euro, fechas, mover, navegacion, nombreMes, type Contexto, campana } from "@/lib/hipica";
 import { crearCargo, generarRecibos, quitarCargo } from "./actions";
 
 type Recibo = {
@@ -54,7 +54,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cobro
   const ctx = await cargarContexto(id);
   if (!ctx.esAdmin) {
     return (
-      <PantallaApp nav={navegacion(ctx, "cobros")} cabecera={<Cabecera antetitulo={ctx.hipica.nombre} titulo="Cobros" />}>
+      <PantallaApp nav={navegacion(ctx, "cobros")} cabecera={<Cabecera campana={campana(ctx)} antetitulo={ctx.hipica.nombre} titulo="Cobros" />}>
         <Vacio>Solo el administrador ve los cobros.</Vacio>
       </PantallaApp>
     );
@@ -114,7 +114,7 @@ async function Cobros({ ctx, q }: { ctx: Contexto; q: Record<string, string | st
     <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "cobros")}
       cabecera={
-        <Cabecera antetitulo={hipica.nombre} titulo="Cobros" demo={ctx.demo}>
+        <Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Cobros" demo={ctx.demo}>
           <Segmento
             label="Mes"
             opciones={[-1, 0, 1].map((n) => {

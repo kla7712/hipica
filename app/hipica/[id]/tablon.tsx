@@ -1,4 +1,4 @@
-import { Seccion, Vacio, boton, botonTexto, campo, tarjeta } from "@/components/app/ui";
+import { Seccion, Vacio, boton, botonTexto, campo, tarjeta, Resumen } from "@/components/app/ui";
 import { fechas, type Contexto } from "@/lib/hipica";
 import { borrarAviso, publicarAviso } from "./actions";
 
@@ -50,9 +50,7 @@ export async function Tablon({ ctx, volver }: { ctx: Contexto; volver: string })
         ))}
         {ctx.esAdmin && (
           <details className={`${tarjeta} group p-4`}>
-            <summary className="flex min-h-11 cursor-pointer list-none items-center font-bold text-cuadra">
-              + Publicar un aviso
-            </summary>
+            <Resumen>Publicar un aviso</Resumen>
             <form action={publicarAviso} className="mt-3 space-y-3">
               <input type="hidden" name="hipica_id" value={ctx.hipica.id} />
               <input type="hidden" name="volver" value={volver} />

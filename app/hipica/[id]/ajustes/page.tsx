@@ -19,7 +19,7 @@ import {
   etiqueta,
   tarjeta,
 } from "@/components/app/ui";
-import { cargarContexto, euros, navegacion } from "@/lib/hipica";
+import { cargarContexto, euros, navegacion, campana } from "@/lib/hipica";
 import {
   borrarServicio,
   borrarTarifaBono,
@@ -51,6 +51,7 @@ type Ajustes = {
   semanas_auto: number;
   exigir_bono: boolean;
   revisar_altas: boolean;
+  recordar_clases: boolean;
   num_boxes: number;
   precio_completo: number | null;
   precio_semi: number | null;
@@ -77,7 +78,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
 
   if (!ctx.esAdmin) {
     return (
-      <PantallaApp nav={nav} cabecera={<Cabecera antetitulo={hipica.nombre} titulo="Ajustes" />}>
+      <PantallaApp nav={nav} cabecera={<Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Ajustes" />}>
         <Vacio>Solo el administrador puede cambiar los ajustes.</Vacio>
       </PantallaApp>
     );
@@ -87,7 +88,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
     supabase
       .from("hipicas")
       .select(
-        "nombre, horas_minimas_anulacion, calendario_auto, semanas_auto, exigir_bono, revisar_altas, num_boxes, precio_completo, precio_semi, precio_box, instrucciones_pago",
+        "nombre, horas_minimas_anulacion, calendario_auto, semanas_auto, exigir_bono, revisar_altas, recordar_clases, num_boxes, precio_completo, precio_semi, precio_box, instrucciones_pago",
       )
       .eq("id", id)
       .single<Ajustes>(),
@@ -110,7 +111,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
     <PantallaApp ancho="amplio"
       nav={nav}
       cabecera={
-        <Cabecera antetitulo={hipica.nombre} titulo="Ajustes" demo={ctx.demo}>
+        <Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Ajustes" demo={ctx.demo}>
           <nav aria-label="Ir a" className="sin-barra -mx-4 overflow-x-auto px-4">
             <ul className="flex gap-2">
               {[
@@ -195,6 +196,16 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/ajust
               <span className="block text-sm text-tinta-suave">
                 Quien use el enlace de alumnos rellena sus datos y espera a que lo apruebes en Gestión. Si no lo marcas,
                 entra directamente.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3">
+            <input type="checkbox" name="recordar_clases" value="si" defaultChecked={h.recordar_clases} className="mt-1 size-5 accent-cuadra" />
+            <span>
+              <span className="font-bold">Recordar las clases el día antes</span>
+              <span className="block text-sm text-tinta-suave">
+                Cada tarde, quien tenga clase al día siguiente recibe un aviso con la hora y su caballo.
               </span>
             </span>
           </label>

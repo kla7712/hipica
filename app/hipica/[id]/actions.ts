@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { UUID } from "@/lib/rutas";
+import { avisar } from "@/lib/avisar";
 
 // La URL solo lleva un código; el texto lo pone la página (evita que alguien
 // fabrique enlaces con mensajes falsos, p. ej. "llama a este teléfono").
@@ -69,6 +70,7 @@ export async function anular(formData: FormData) {
   const [hipicaId, reservaId] = leer(formData, "hipica_id", "reserva_id");
   const supabase = await createClient();
   const { error } = await supabase.rpc("anular_reserva", { p_reserva: reservaId });
+  avisar();
   if (error) conAviso(destino(formData, hipicaId), error.message);
   listo(formData, hipicaId);
 }
@@ -103,6 +105,7 @@ export async function publicarAviso(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.from("avisos").insert({ hipica_id: hipicaId, texto });
+  avisar();
   if (error) {
     console.error("publicar aviso:", error.message);
     conAviso(destino(formData, hipicaId), "error");

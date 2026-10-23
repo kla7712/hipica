@@ -19,10 +19,11 @@ import {
   Vacio,
   tarjeta,
 } from "@/components/app/ui";
-import { CUIDADOS, cuandoToca, fechas, navegacion, type Contexto } from "@/lib/hipica";
+import { CUIDADOS, cuandoToca, fechas, navegacion, type Contexto, campana } from "@/lib/hipica";
 import { resumenBono, type EstadoBono, type SesionHorario } from "@/lib/tipos";
 import { textoAviso } from "@/lib/avisos";
 import { Tablon } from "./tablon";
+import { InvitarAvisos } from "@/components/app/avisos-movil";
 import { ListaSolicitudes, type Solicitud } from "./servicios/solicitudes";
 
 type Alerta = { titulo: string; detalle: string; href: string; tono: "atencion" | "info"; icono: NombreIcono; orden: number };
@@ -266,18 +267,19 @@ export async function Hoy({ ctx, pista, aviso }: { ctx: Contexto; pista?: string
     <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "inicio")}
       cabecera={
-        <Cabecera antetitulo={hipica.nombre} titulo={f.largo(ahora)} demo={ctx.demo}>
+        <Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo={f.largo(ahora)} demo={ctx.demo}>
           <Cifras
             items={[
               { valor: activas.length, texto: activas.length === 1 ? "clase hoy" : "clases hoy" },
               { valor: activas.reduce((n, s) => n + s.ocupadas, 0), texto: "jinetes hoy" },
-              { valor: alertas.length, texto: alertas.length === 1 ? "aviso" : "avisos", href: "#atencion" },
+              { valor: alertas.length, texto: "por atender", href: "#atencion" },
             ]}
           />
         </Cabecera>
       }
     >
       {mensaje && <Aviso tipo="error">{mensaje}</Aviso>}
+      {!ctx.demo && <InvitarAvisos />}
 
       <Columnas>
         <Columna>

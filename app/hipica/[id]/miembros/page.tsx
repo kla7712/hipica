@@ -23,7 +23,7 @@ import {
   etiqueta,
   tarjeta,
 } from "@/components/app/ui";
-import { cargarContexto, fechas, navegacion } from "@/lib/hipica";
+import { cargarContexto, fechas, navegacion, campana } from "@/lib/hipica";
 import { resumenBono, type EstadoBono } from "@/lib/tipos";
 import { anadirSinCuenta, borrarInvitacion, crearInvitacion } from "./actions";
 
@@ -54,7 +54,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
 
   if (!ctx.esAdmin) {
     return (
-      <PantallaApp nav={nav} cabecera={<Cabecera antetitulo={hipica.nombre} titulo="Alumnos" />}>
+      <PantallaApp nav={nav} cabecera={<Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Alumnos" />}>
         <Vacio>Solo el administrador puede gestionar los alumnos.</Vacio>
       </PantallaApp>
     );
@@ -97,7 +97,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/miemb
     <PantallaApp ancho="amplio"
       nav={nav}
       cabecera={
-        <Cabecera antetitulo={hipica.nombre} titulo="Alumnos" demo={ctx.demo}>
+        <Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Alumnos" demo={ctx.demo}>
           <Segmento
             label="Ver"
             opciones={[

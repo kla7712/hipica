@@ -17,6 +17,7 @@ export async function guardarAjustes(formData: FormData) {
   const semanas = Number(formData.get("semanas"));
   const exigirBono = formData.get("exigir_bono") === "si";
   const revisarAltas = formData.get("revisar_altas") === "si";
+  const recordarClases = formData.get("recordar_clases") === "si";
   const boxes = Number(formData.get("num_boxes") || 0);
 
   if (
@@ -41,6 +42,7 @@ export async function guardarAjustes(formData: FormData) {
       semanas_auto: semanas,
       exigir_bono: exigirBono,
       revisar_altas: revisarAltas,
+      recordar_clases: recordarClases,
       num_boxes: boxes,
     })
     .eq("id", hipicaId);

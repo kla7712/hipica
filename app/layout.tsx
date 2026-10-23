@@ -4,9 +4,9 @@ import "@fontsource-variable/bricolage-grotesque/standard.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Reservas de clases",
-  description: "Horario y reservas de clases de tu hípica.",
-  appleWebApp: { capable: true, title: "Reservas", statusBarStyle: "default" },
+  title: "Tu hípica",
+  description: "Clases, caballos, cuadra y cobros de tu hípica.",
+  appleWebApp: { capable: true, title: "Hípica", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

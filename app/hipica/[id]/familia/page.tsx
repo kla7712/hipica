@@ -17,7 +17,7 @@ import {
   etiqueta,
   tarjeta,
 } from "@/components/app/ui";
-import { cargarContexto, fechas, navegacion } from "@/lib/hipica";
+import { cargarContexto, fechas, navegacion, campana } from "@/lib/hipica";
 import { resumenBono, type EstadoBono } from "@/lib/tipos";
 import { anadirJinete, quitarJinete } from "./actions";
 import { MisPagos } from "./mis-pagos";
@@ -87,7 +87,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/famil
     <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "familia")}
       cabecera={
-        <Cabecera
+        <Cabecera campana={campana(ctx)}
           antetitulo={hipica.nombre}
           titulo="Tu familia"
           detalle="Quién monta, tus recibos y cómo pagar."

@@ -18,7 +18,7 @@ import {
   botonSecundario,
   tarjeta,
 } from "@/components/app/ui";
-import { cargarContexto, fechas, navegacion, nombrePila, type Contexto } from "@/lib/hipica";
+import { cargarContexto, fechas, navegacion, nombrePila, type Contexto, campana } from "@/lib/hipica";
 import { resumenBono, type EstadoBono, type SesionHorario } from "@/lib/tipos";
 import { textoAviso } from "@/lib/avisos";
 import { anular, apuntarseEspera, reservar, salirEspera } from "../actions";
@@ -129,7 +129,7 @@ async function Horario({
     const plazas = semana.reduce((n, s) => n + s.plazas, 0);
     const ocupadas = semana.reduce((n, s) => n + Math.min(s.ocupadas, s.plazas), 0);
     cabecera = (
-      <Cabecera antetitulo="Próximos 7 días" titulo="Clases" demo={ctx.demo}>
+      <Cabecera campana={campana(ctx)} antetitulo="Próximos 7 días" titulo="Clases" demo={ctx.demo}>
         {ctx.esAdmin && (
           <Segmento
             label="Ver"
@@ -149,7 +149,7 @@ async function Horario({
       </Cabecera>
     );
   } else {
-    cabecera = <Cabecera antetitulo={hipica.nombre} titulo="Reservar" demo={ctx.demo} />;
+    cabecera = <Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Reservar" demo={ctx.demo} />;
   }
 
   /* ---------- Para el equipo: caballos que faltan ---------- */

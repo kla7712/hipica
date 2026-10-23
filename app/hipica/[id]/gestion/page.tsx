@@ -14,7 +14,7 @@ import {
   botonSecundario,
   tarjeta,
 } from "@/components/app/ui";
-import { cargarContexto, navegacion, PUPILAJES, type Contexto } from "@/lib/hipica";
+import { cargarContexto, navegacion, PUPILAJES, type Contexto, campana } from "@/lib/hipica";
 import { revisarAlta } from "./actions";
 
 type Alta = {
@@ -49,7 +49,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/gesti
   const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
   if (!ctx.esAdmin) {
     return (
-      <PantallaApp nav={navegacion(ctx, "gestion")} cabecera={<Cabecera antetitulo={ctx.hipica.nombre} titulo="Gestión" />}>
+      <PantallaApp nav={navegacion(ctx, "gestion")} cabecera={<Cabecera campana={campana(ctx)} antetitulo={ctx.hipica.nombre} titulo="Gestión" />}>
         <Vacio>Solo el administrador puede ver la gestión de la hípica.</Vacio>
       </PantallaApp>
     );
@@ -89,7 +89,7 @@ async function Gestion({ ctx, mensaje }: { ctx: Contexto; mensaje: { tipo: "ok" 
     <PantallaApp
       nav={navegacion(ctx, "gestion")}
       cabecera={
-        <Cabecera antetitulo={hipica.nombre} titulo="Gestión" demo={ctx.demo}>
+        <Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Gestión" demo={ctx.demo}>
           <Cifras
             items={[
               { valor: (altas ?? []).length, texto: "altas por revisar", href: "#altas" },

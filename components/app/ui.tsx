@@ -112,6 +112,7 @@ export function Cabecera({
   detalle,
   volver,
   cuenta = true,
+  campana,
   demo = false,
   children,
 }: {
@@ -120,6 +121,7 @@ export function Cabecera({
   detalle?: ReactNode;
   volver?: { href: string; texto: string };
   cuenta?: boolean;
+  campana?: { href: string; sinLeer: number };
   demo?: boolean;
   children?: ReactNode;
 }) {
@@ -140,6 +142,24 @@ export function Cabecera({
             {antetitulo && <span className="truncate">{antetitulo}</span>}
           </span>
         )}
+        <span className="flex shrink-0 items-center">
+        {campana && (
+          <Link
+            href={campana.href}
+            aria-label={campana.sinLeer ? `Avisos: ${campana.sinLeer} sin leer` : "Avisos"}
+            className="relative inline-flex size-11 items-center justify-center rounded-full text-cuadra-claro hover:bg-white/10 hover:text-white"
+          >
+            <Icono nombre="campana" className="size-[22px]" />
+            {campana.sinLeer > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-alfalfa px-1 text-xs font-extrabold text-tinta"
+              >
+                {campana.sinLeer > 9 ? "9+" : campana.sinLeer}
+              </span>
+            )}
+          </Link>
+        )}
         {cuenta && (
           <Link
             href="/cuenta"
@@ -149,6 +169,7 @@ export function Cabecera({
             Mi cuenta
           </Link>
         )}
+        </span>
       </div>
       <div>
         {volver && antetitulo && <p className="text-sm font-semibold text-cuadra-claro">{antetitulo}</p>}

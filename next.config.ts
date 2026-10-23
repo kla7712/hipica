@@ -27,7 +27,11 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/:path*", headers: cabecerasSeguridad }];
+    return [
+      { source: "/:path*", headers: cabecerasSeguridad },
+      // El service worker se revisa siempre, para que los cambios lleguen enseguida.
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
+    ];
   },
 };
 

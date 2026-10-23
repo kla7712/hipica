@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { UUID } from "@/lib/rutas";
+import { avisar } from "@/lib/avisar";
 
 function ids(formData: FormData, ...campos: string[]) {
   const valores = campos.map((c) => String(formData.get(c) ?? ""));
@@ -144,6 +145,7 @@ export async function crearCuidado(formData: FormData) {
   const { error } = await supabase
     .from("cuidados")
     .insert({ hipica_id: hipicaId, caballo_id: caballoId, tipo, fecha, nota: nota || null });
+  avisar();
   if (error) {
     console.error("crear cuidado:", error.message);
     redirect(`${ficha}?error=cuidado`);
@@ -156,6 +158,7 @@ export async function cuidadoHecho(formData: FormData) {
   const nota = texto(formData, "nota");
   const supabase = await createClient();
   const { error } = await supabase.rpc("cuidado_hecho", { p_cuidado: cuidadoId, p_nota: nota || null });
+  avisar();
   if (error) {
     console.error("cuidado hecho:", error.message);
     volver(formData, hipicaId, "error=cuidado");

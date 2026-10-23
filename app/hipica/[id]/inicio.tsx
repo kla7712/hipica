@@ -13,11 +13,12 @@ import {
   botonSecundario,
   tarjeta,
 } from "@/components/app/ui";
-import { fechas, navegacion, nombrePila, unir, type Contexto } from "@/lib/hipica";
+import { fechas, navegacion, nombrePila, unir, type Contexto, campana } from "@/lib/hipica";
 import { resumenBono, type EstadoBono, type SesionHorario } from "@/lib/tipos";
 import { textoAviso } from "@/lib/avisos";
 import { anular, salirEspera } from "./actions";
 import { Tablon } from "./tablon";
+import { InvitarAvisos } from "@/components/app/avisos-movil";
 import { MisCaballos } from "./mis-caballos";
 
 const DIAS = 14;
@@ -74,7 +75,7 @@ export async function Inicio({ ctx, aviso }: { ctx: Contexto; aviso?: string | s
   return (
     <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "inicio")}
-      cabecera={<Cabecera antetitulo={hipica.nombre} titulo={`Hola, ${nombrePila(ctx.yo.nombre)}`} demo={ctx.demo} />}
+      cabecera={<Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo={`Hola, ${nombrePila(ctx.yo.nombre)}`} demo={ctx.demo} />}
     >
       <div className="space-y-3">
         {mensaje && <Aviso tipo="error">{mensaje}</Aviso>}
@@ -90,6 +91,7 @@ export async function Inicio({ ctx, aviso }: { ctx: Contexto; aviso?: string | s
             Trueno o responde a su vacuna: todo vuelve a su estado original cada noche.
           </Aviso>
         )}
+        {!ctx.demo && <InvitarAvisos />}
       </div>
 
       <Columnas>

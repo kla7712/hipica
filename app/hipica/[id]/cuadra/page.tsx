@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { InvitarAvisos } from "@/components/app/avisos-movil";
 import {
   Columna,
   Columnas,
@@ -21,7 +22,7 @@ import {
   etiqueta,
   tarjeta,
 } from "@/components/app/ui";
-import { capitalizar, cargarContexto, fechas, navegacion, nombrePila, type Contexto } from "@/lib/hipica";
+import { capitalizar, cargarContexto, fechas, navegacion, nombrePila, type Contexto, campana } from "@/lib/hipica";
 import { ListaCuidados, type Cuidado } from "../caballos/cuidados";
 import { ListaSolicitudes, type Solicitud } from "../servicios/solicitudes";
 import {
@@ -81,7 +82,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cuadr
   const mensaje = codigo && Object.hasOwn(MENSAJES, codigo) ? MENSAJES[codigo] : null;
   if (!ctx.esEquipo) {
     return (
-      <PantallaApp nav={navegacion(ctx, null)} cabecera={<Cabecera antetitulo={ctx.hipica.nombre} titulo="Cuadra" />}>
+      <PantallaApp nav={navegacion(ctx, null)} cabecera={<Cabecera campana={campana(ctx)} antetitulo={ctx.hipica.nombre} titulo="Cuadra" />}>
         <Vacio>Esta sección es para el equipo de la hípica.</Vacio>
       </PantallaApp>
     );
@@ -169,7 +170,7 @@ async function Cuadra({
     <PantallaApp ancho="amplio"
       nav={navegacion(ctx, "cuadra")}
       cabecera={
-        <Cabecera antetitulo={capitalizar(f.largo(ahora))} titulo="Cuadra" demo={ctx.demo}>
+        <Cabecera campana={campana(ctx)} antetitulo={capitalizar(f.largo(ahora))} titulo="Cuadra" demo={ctx.demo}>
           <Segmento
             label="Turno"
             opciones={[
@@ -186,6 +187,7 @@ async function Cuadra({
           <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso>
         </div>
       )}
+      {!ctx.demo && <InvitarAvisos />}
 
       <Columnas>
         <Columna>

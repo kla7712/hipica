@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { UUID } from "@/lib/rutas";
+import { avisar } from "@/lib/avisar";
 
 function ids(formData: FormData, ...campos: string[]) {
   const valores = campos.map((c) => String(formData.get(c) ?? ""));
@@ -46,6 +47,7 @@ export async function darDeBaja(formData: FormData) {
   const [hipicaId, miembroId] = ids(formData, "hipica_id", "miembro_id");
   const supabase = await createClient();
   const { error } = await supabase.rpc("dar_de_baja", { p_miembro: miembroId });
+  avisar();
   if (error) {
     console.error("dar_de_baja:", error.message);
     redirect(`/hipica/${hipicaId}/miembros?error=baja`);

@@ -18,7 +18,7 @@ import {
   tarjeta,
 } from "@/components/app/ui";
 import { SelectAuto } from "@/components/app/select-auto";
-import { cargarContexto, fechas, navegacion, PUPILAJES, UBICACIONES } from "@/lib/hipica";
+import { cargarContexto, fechas, navegacion, PUPILAJES, UBICACIONES, campana } from "@/lib/hipica";
 import { moverCaballo } from "./actions";
 import { FormCaballo } from "./form-caballo";
 
@@ -62,7 +62,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
   if (!ctx.esEquipo) {
     if (ctx.misCaballos.length) redirect(`/hipica/${id}/caballos/${ctx.misCaballos[0].id}`);
     return (
-      <PantallaApp nav={nav} cabecera={<Cabecera antetitulo={hipica.nombre} titulo="Caballos" />}>
+      <PantallaApp nav={nav} cabecera={<Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Caballos" />}>
         <Vacio>Esta sección es para la hípica.</Vacio>
       </PantallaApp>
     );
@@ -156,7 +156,7 @@ async function Contenido({ params, searchParams }: PageProps<"/hipica/[id]/cabal
     <PantallaApp ancho="amplio"
       nav={nav}
       cabecera={
-        <Cabecera antetitulo={hipica.nombre} titulo="Caballos" demo={ctx.demo}>
+        <Cabecera campana={campana(ctx)} antetitulo={hipica.nombre} titulo="Caballos" demo={ctx.demo}>
           <Cifras
             items={[
               { valor: dePropietarios.length, texto: "de propietarios" },

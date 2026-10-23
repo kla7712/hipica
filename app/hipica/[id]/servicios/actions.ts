@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { UUID } from "@/lib/rutas";
+import { avisar } from "@/lib/avisar";
 
 function ids(formData: FormData, ...campos: string[]) {
   const valores = campos.map((c) => String(formData.get(c) ?? ""));
@@ -36,6 +37,7 @@ export async function pedirServicios(formData: FormData) {
     p_fecha: fecha,
     p_nota: nota || null,
   });
+  avisar();
   if (error) {
     console.error("pedir servicios:", error.message);
     redirect(`${aqui}&error=${error.message.includes("demasiadas") ? "muchas" : "pedir"}`);
@@ -51,6 +53,7 @@ export async function responderSolicitud(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("responder_solicitud", { p_solicitud: solicitudId, p_estado: estado });
+  avisar();
   if (error) {
     console.error("responder solicitud:", error.message);
     redirect(`${destino(formData, hipicaId)}?aviso=error`);
